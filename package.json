@@ -1,0 +1,27 @@
+{
+  "name": "careerforge-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CareerForge AI — local-first multi-agent career-intelligence platform (flagship vertical slice).",
+  "license": "MIT",
+  "workspaces": [
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "web": "npm --prefix apps/web run dev",
+    "web:install": "npm --prefix apps/web install",
+    "web:build": "npm --prefix apps/web run build",
+    "web:start": "npm --prefix apps/web run start",
+    "web:lint": "npm --prefix apps/web run lint",
+    "dev": "npm --prefix apps/web run dev",
+    "postinstall": "echo \"Frontend deps installed. Set up the backend with: pip install -e ./apps/api  (see README.md). Windows users: use scripts/setup.ps1 and scripts/dev.ps1.\""
+  },
+  "comments": {
+    "note": "This root package.json only orchestrates the Next.js frontend in apps/web. The Python backend (apps/api) is managed with pip/venv — see README.md.",
+    "windows": "On Windows, prefer scripts/setup.ps1 and scripts/dev.ps1 which boot BOTH the Python backend and the frontend. `npm run dev` here starts only the frontend.",
+    "unix": "On macOS/Linux, `bash scripts/dev.sh` boots both processes; `npm run dev` starts only the frontend."
+  }
+}
