@@ -50,7 +50,8 @@ GPU, or Ollama.
 | **Findings / candidates / verification**| **SIMULATED**   | pre-authored, includes an accepted + a REJECTED candidate     |
 | **Approval flow**                       | **REAL transport, SIMULATED effect** | `/approvals` records decision; `github_write` always `false`, draft saved locally |
 | Model Gateway (Ollama)                  | NOT-YET-WIRED   | specced (`MASTER_SPEC.md` §4); `health` reports `mock`        |
-| RAG (Qdrant + embeddings)               | NOT-YET-WIRED   | specced (`MASTER_SPEC.md` §9); stubbed                        |
+| **RAG (Qdrant + embeddings)**           | **REAL**        | `packages/rag_core` — real Ollama embeddings + Qdrant (local/server), hybrid dense+BM25, RRF, rerank, citations, claim verifier; `/api/v1/rag/*`; 31 tests |
+| **Code indexing (AST/Tree-sitter)**     | **REAL**        | `rag_core/chunking.py` — stdlib AST, chunk by function/class/method/module/doc-section |
 | Real GitHub read-only client            | NOT-YET-WIRED   | specced; repo intake is simulated                             |
 | Docker sandbox (untrusted execution)    | NOT-YET-WIRED   | specced (`THREAT_MODEL.md` §2.1); `repository_execution=false`|
 | LangGraph subgraphs (in-stage)          | NOT-YET-WIRED   | specced (`ADR-0002`)                                         |
@@ -74,7 +75,7 @@ phase.
 | 1     | Model Gateway (Ollama/local)   | NOT-YET-WIRED — specced, `health` reports `mock`         |
 | 2     | Profile Brain & evidence model | **Demo real** — seeded profile/skills/evidence + API    |
 | 3     | Contribution Engine (10 stages)| **Simulated** — full scripted mission over SSE          |
-| 4     | RAG (Qdrant + embeddings)      | NOT-YET-WIRED — specced, stubbed                         |
+| 4     | RAG (Qdrant + embeddings)      | **REAL** — `rag_core`: Ollama embeddings + Qdrant + hybrid retrieval + citations + claim verifier; live `/api/v1/rag/*` |
 | 5     | Multi-agent orchestration      | **Simulated** — agent graph, verifiers, approval gate   |
 | 6     | Command Center UI              | **Done** — live graph, event log, gauges, pipeline      |
 | 7     | Runtime sandbox (Docker)       | NOT-YET-WIRED — specced in `THREAT_MODEL.md`             |

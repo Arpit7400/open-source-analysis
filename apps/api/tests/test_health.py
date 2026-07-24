@@ -16,6 +16,10 @@ client = TestClient(app)
 # Enums / constants straight from docs/API_CONTRACT.md.
 _VALID_PROFILES = {"CPU_LOW", "VRAM_8_12", "VRAM_16_24", "WORKSTATION"}
 _MOCKABLE_SERVICES = {"database", "qdrant", "redis", "ollama", "temporal"}
+# The RAG subsystem (Phases 2 & 4) is a real service: its health value is a
+# provider label (e.g. "ollama+qdrant-local", "hash+qdrant-local", "down"),
+# not one of the mock/up/down statuses the stub services report.
+_ALL_SERVICES = {"api", "rag", *_MOCKABLE_SERVICES}
 
 
 def test_health_returns_200_and_contract_shape() -> None:
@@ -28,10 +32,12 @@ def test_health_returns_200_and_contract_shape() -> None:
 
     # Services block: api is up; the rest are present with a valid status.
     services = body["services"]
-    assert set(services) == {"api", *_MOCKABLE_SERVICES}
+    assert set(services) == _ALL_SERVICES
     assert services["api"] == "up"
     for name in _MOCKABLE_SERVICES:
         assert services[name] in {"up", "down", "mock"}
+    # rag reports a non-empty provider label.
+    assert isinstance(services["rag"], str) and services["rag"]
 
     # Hardware profile must be one of the four contract values.
     assert body["hardware_profile"] in _VALID_PROFILES

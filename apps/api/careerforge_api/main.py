@@ -1423,6 +1423,34 @@ def run_mission_sync(repo_url: str) -> str:
 
 
 # ===========================================================================
+# Adapter: RAG subsystem (packages/rag_core, wired via rag_service)
+# ===========================================================================
+# The RAG endpoints and the ``services.rag`` health value are served by the thin
+# ``careerforge_api.rag_service`` adapter, which lazily builds the real
+# ``rag_core`` pipeline (Ollama/hash embedder + local/server Qdrant) and seeds
+# the repo's own docs on first use. Wiring is defensive: if the adapter (or
+# ``rag_core``) is missing the app still boots and health simply reports
+# ``rag: "down"``.
+try:
+    from careerforge_api import rag_router as _rag_router_mod
+    from careerforge_api import rag_service as _rag_service_mod
+
+    _RAG_ROUTER: Any | None = _rag_router_mod.router
+
+    def _rag_health_label() -> str:
+        try:
+            return str(_rag_service_mod.health_label())
+        except Exception:
+            return "down"
+
+except Exception:  # pragma: no cover - RAG optional at boot
+    _RAG_ROUTER = None
+
+    def _rag_health_label() -> str:
+        return "down"
+
+
+# ===========================================================================
 # Error handling — contract error shape
 # ===========================================================================
 def _error_response(status_code: int, code: str, message: str, detail: Any = None) -> JSONResponse:
@@ -1473,6 +1501,16 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
 
 
 # ---------------------------------------------------------------------------
+# RAG router (POST /rag/query, POST /rag/index/repository, GET /rag/collections)
+# mounted under the shared /api/v1 prefix. Only included when the adapter and
+# rag_core imported cleanly; otherwise the endpoints are simply absent and
+# health reports rag: "down".
+# ---------------------------------------------------------------------------
+if _RAG_ROUTER is not None:
+    app.include_router(_RAG_ROUTER, prefix=API_PREFIX)
+
+
+# ---------------------------------------------------------------------------
 # Root banner
 # ---------------------------------------------------------------------------
 @app.get("/")
@@ -1505,6 +1543,10 @@ async def system_health() -> dict[str, Any]:
             "redis": service_state,
             "ollama": service_state,
             "temporal": service_state,
+            # The RAG subsystem is real/local-first even in demo mode, so its
+            # health reflects the actually-resolved providers (or "down").
+            # e.g. "ollama+qdrant-local" | "hash+qdrant-local" | "down".
+            "rag": _rag_health_label(),
         },
         "hardware_profile": HARDWARE_PROFILE,
         "flags": {
