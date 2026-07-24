@@ -42,6 +42,8 @@ dependencies = [
     # ``packages/github_client``; installed editable via [tool.uv.sources]
     # below (or `pip install -e ../../packages/github_client`).
     "github_client",
+    # Static analysis agents (Phase 5).
+    "static_analysis",
 ]
 
 # Resolve the local sibling packages from the monorepo path when using uv.
@@ -51,6 +53,7 @@ dependencies = [
 [tool.uv.sources]
 rag_core = { path = "../../packages/rag_core", editable = true }
 github_client = { path = "../../packages/github_client", editable = true }
+static_analysis = { path = "../../packages/static_analysis", editable = true }
 
 [project.optional-dependencies]
 dev = [

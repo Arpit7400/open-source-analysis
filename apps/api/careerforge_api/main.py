@@ -1478,6 +1478,31 @@ except Exception:  # pragma: no cover - GitHub optional at boot
 
 
 # ===========================================================================
+# Adapter: Static analysis subsystem (packages/static_analysis, Phase 5)
+# ===========================================================================
+# ``POST /api/v1/analysis/static`` runs the real AST + ruff/mypy swarm. Wiring
+# is defensive: if the adapter/package is missing, the app still boots and
+# health reports static_analysis: "down".
+try:
+    from careerforge_api import analysis_router as _analysis_router_mod
+    from careerforge_api import analysis_service as _analysis_service_mod
+
+    _ANALYSIS_ROUTER: Any | None = _analysis_router_mod.router
+
+    def _analysis_health_label() -> str:
+        try:
+            return str(_analysis_service_mod.health_label())
+        except Exception:
+            return "down"
+
+except Exception:  # pragma: no cover - analysis optional at boot
+    _ANALYSIS_ROUTER = None
+
+    def _analysis_health_label() -> str:
+        return "down"
+
+
+# ===========================================================================
 # Error handling — contract error shape
 # ===========================================================================
 def _error_response(status_code: int, code: str, message: str, detail: Any = None) -> JSONResponse:
@@ -1547,6 +1572,10 @@ if _RAG_ROUTER is not None:
 if _GITHUB_ROUTER is not None:
     app.include_router(_GITHUB_ROUTER, prefix=API_PREFIX)
 
+# Static-analysis router (POST /analysis/static) — Phase 5.
+if _ANALYSIS_ROUTER is not None:
+    app.include_router(_ANALYSIS_ROUTER, prefix=API_PREFIX)
+
 
 # ---------------------------------------------------------------------------
 # Root banner
@@ -1589,6 +1618,8 @@ async def system_health() -> dict[str, Any]:
             # the package imported and a read-only PAT is configured.
             # "authenticated" | "anonymous" | "down".
             "github": _github_health_label(),
+            # Static-analysis swarm (Phase 5): "ready" | "down".
+            "static_analysis": _analysis_health_label(),
         },
         "hardware_profile": HARDWARE_PROFILE,
         "flags": {
