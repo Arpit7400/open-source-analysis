@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "github_client"
+version = "0.1.0"
+description = "Real, typed, read-only GitHub client for CareerForge AI (async httpx, Pydantic v2, secret-redacting, hermetic-testable)."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "CareerForge AI" }]
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2",
+    "pydantic-settings>=2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["github_client"]
+
+# --- Ruff (mirrors rag_core / apps/api style) ------------------------------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["github_client", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # comprehensions
+    "SIM",  # flake8-simplify
+    "TCH",  # type-checking imports
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "E501",   # line length handled by formatter
+    "UP042",  # `str, Enum` is intentional for transparent JSON enum values
+    "RUF022", # `__all__` grouped by contract section on purpose, not sorted
+    # TC001/TC002/TC003: several "type-only" imports (e.g. httpx used as
+    # httpx.MockTransport in fixtures/annotations) are also used at runtime, so
+    # moving them under TYPE_CHECKING would break imports. Keep at module scope.
+    "TC001",
+    "TC002",
+    "TC003",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["github_client"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+# --- Mypy (mirrors rag_core / apps/api style) ------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+
+# --- Pytest ----------------------------------------------------------------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra"

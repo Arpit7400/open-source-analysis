@@ -38,13 +38,19 @@ dependencies = [
     "rag_core",
     "qdrant-client>=1.12",
     "numpy>=1.26",
+    # GitHub read-only client (Phase 3). Local sibling package at
+    # ``packages/github_client``; installed editable via [tool.uv.sources]
+    # below (or `pip install -e ../../packages/github_client`).
+    "github_client",
 ]
 
-# Resolve the local ``rag_core`` package from the monorepo path when using uv.
-# Plain pip users install it explicitly with:
+# Resolve the local sibling packages from the monorepo path when using uv.
+# Plain pip users install them explicitly with:
 #   pip install -e ../../packages/rag_core
+#   pip install -e ../../packages/github_client
 [tool.uv.sources]
 rag_core = { path = "../../packages/rag_core", editable = true }
+github_client = { path = "../../packages/github_client", editable = true }
 
 [project.optional-dependencies]
 dev = [

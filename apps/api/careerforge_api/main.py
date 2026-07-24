@@ -1451,6 +1451,33 @@ except Exception:  # pragma: no cover - RAG optional at boot
 
 
 # ===========================================================================
+# Adapter: GitHub subsystem (packages/github_client, wired via github_service)
+# ===========================================================================
+# The GitHub endpoints and the ``services.github`` health value are served by
+# the thin ``careerforge_api.github_service`` adapter, which owns the read-only
+# ``github_client`` lifecycle and feeds real repo content into ``rag_core``.
+# Wiring is defensive: if the adapter (or ``github_client``) is missing the app
+# still boots and health simply reports github: "down".
+try:
+    from careerforge_api import github_router as _github_router_mod
+    from careerforge_api import github_service as _github_service_mod
+
+    _GITHUB_ROUTER: Any | None = _github_router_mod.router
+
+    def _github_health_label() -> str:
+        try:
+            return str(_github_service_mod.health_label())
+        except Exception:
+            return "down"
+
+except Exception:  # pragma: no cover - GitHub optional at boot
+    _GITHUB_ROUTER = None
+
+    def _github_health_label() -> str:
+        return "down"
+
+
+# ===========================================================================
 # Error handling — contract error shape
 # ===========================================================================
 def _error_response(status_code: int, code: str, message: str, detail: Any = None) -> JSONResponse:
@@ -1511,6 +1538,17 @@ if _RAG_ROUTER is not None:
 
 
 # ---------------------------------------------------------------------------
+# GitHub router (GET /github/repo[/issues|/pulls|/commits|/releases],
+# GET /github/rate-limit, POST /github/index) mounted under the shared
+# /api/v1 prefix. Only included when the adapter and github_client imported
+# cleanly; otherwise the endpoints are simply absent and health reports
+# github: "down".
+# ---------------------------------------------------------------------------
+if _GITHUB_ROUTER is not None:
+    app.include_router(_GITHUB_ROUTER, prefix=API_PREFIX)
+
+
+# ---------------------------------------------------------------------------
 # Root banner
 # ---------------------------------------------------------------------------
 @app.get("/")
@@ -1547,6 +1585,10 @@ async def system_health() -> dict[str, Any]:
             # health reflects the actually-resolved providers (or "down").
             # e.g. "ollama+qdrant-local" | "hash+qdrant-local" | "down".
             "rag": _rag_health_label(),
+            # The GitHub client is real + read-only; its health reflects whether
+            # the package imported and a read-only PAT is configured.
+            # "authenticated" | "anonymous" | "down".
+            "github": _github_health_label(),
         },
         "hardware_profile": HARDWARE_PROFILE,
         "flags": {
