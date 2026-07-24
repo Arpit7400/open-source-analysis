@@ -44,6 +44,8 @@ dependencies = [
     "github_client",
     # Static analysis agents (Phase 5).
     "static_analysis",
+    # Duplicate detection (Phase 8).
+    "dup_detect",
 ]
 
 # Resolve the local sibling packages from the monorepo path when using uv.
@@ -54,6 +56,7 @@ dependencies = [
 rag_core = { path = "../../packages/rag_core", editable = true }
 github_client = { path = "../../packages/github_client", editable = true }
 static_analysis = { path = "../../packages/static_analysis", editable = true }
+dup_detect = { path = "../../packages/dup_detect", editable = true }
 
 [project.optional-dependencies]
 dev = [

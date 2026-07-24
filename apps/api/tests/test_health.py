@@ -19,7 +19,7 @@ _MOCKABLE_SERVICES = {"database", "qdrant", "redis", "ollama", "temporal"}
 # The RAG subsystem (Phases 2 & 4) is a real service: its health value is a
 # provider label (e.g. "ollama+qdrant-local", "hash+qdrant-local", "down"),
 # not one of the mock/up/down statuses the stub services report.
-_ALL_SERVICES = {"api", "rag", "github", "static_analysis", *_MOCKABLE_SERVICES}
+_ALL_SERVICES = {"api", "rag", "github", "static_analysis", "duplicates", *_MOCKABLE_SERVICES}
 
 
 def test_health_returns_200_and_contract_shape() -> None:
@@ -42,6 +42,8 @@ def test_health_returns_200_and_contract_shape() -> None:
     assert services["github"] in {"authenticated", "anonymous", "down"}
     # static_analysis reports "ready" | "down".
     assert services["static_analysis"] in {"ready", "down"}
+    # duplicates (Phase 8) reports "ready" | "down".
+    assert services["duplicates"] in {"ready", "down"}
 
     # Hardware profile must be one of the four contract values.
     assert body["hardware_profile"] in _VALID_PROFILES

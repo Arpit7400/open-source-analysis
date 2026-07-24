@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dup_detect"
+version = "0.1.0"
+description = "Duplicate issue/PR detection for CareerForge AI (Phase 8): exact-signal + semantic similarity."
+requires-python = ">=3.12"
+readme = "README.md"
+dependencies = [
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["dup_detect"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "TC", "RUF"]
+ignore = ["E501", "UP042", "RUF022", "TC001", "TC003"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dup_detect"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+explicit_package_bases = true
+mypy_path = "."
+strict = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

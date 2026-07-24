@@ -1503,6 +1503,29 @@ except Exception:  # pragma: no cover - analysis optional at boot
 
 
 # ===========================================================================
+# Adapter: Duplicate detection subsystem (packages/dup_detect, Phase 8)
+# ===========================================================================
+try:
+    from careerforge_api import dup_router as _dup_router_mod
+
+    _DUP_ROUTER: Any | None = _dup_router_mod.router
+
+    def _dup_health_label() -> str:
+        try:
+            import dup_detect  # noqa: F401
+
+            return "ready"
+        except Exception:
+            return "down"
+
+except Exception:  # pragma: no cover - dup detection optional at boot
+    _DUP_ROUTER = None
+
+    def _dup_health_label() -> str:
+        return "down"
+
+
+# ===========================================================================
 # Error handling — contract error shape
 # ===========================================================================
 def _error_response(status_code: int, code: str, message: str, detail: Any = None) -> JSONResponse:
@@ -1576,6 +1599,10 @@ if _GITHUB_ROUTER is not None:
 if _ANALYSIS_ROUTER is not None:
     app.include_router(_ANALYSIS_ROUTER, prefix=API_PREFIX)
 
+# Duplicate-detection router (POST /duplicates/check) — Phase 8.
+if _DUP_ROUTER is not None:
+    app.include_router(_DUP_ROUTER, prefix=API_PREFIX)
+
 
 # ---------------------------------------------------------------------------
 # Root banner
@@ -1620,6 +1647,8 @@ async def system_health() -> dict[str, Any]:
             "github": _github_health_label(),
             # Static-analysis swarm (Phase 5): "ready" | "down".
             "static_analysis": _analysis_health_label(),
+            # Duplicate detection (Phase 8): "ready" | "down".
+            "duplicates": _dup_health_label(),
         },
         "hardware_profile": HARDWARE_PROFILE,
         "flags": {
