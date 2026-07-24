@@ -31,7 +31,16 @@ def _resolve_host_port() -> tuple[str, int]:
 
 def main() -> None:
     """Run the ASGI server."""
+    import logging
+
     import uvicorn
+
+    # Ensure the app's own loggers (e.g. the ``careerforge_api`` bootup report)
+    # are visible on the console alongside uvicorn's output.
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
+    )
 
     host, port = _resolve_host_port()
 

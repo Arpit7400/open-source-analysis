@@ -33,6 +33,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
 import platform
 import time
 import uuid
@@ -56,6 +57,8 @@ except ImportError as exc:  # pragma: no cover - dependency guaranteed by instal
 # ---------------------------------------------------------------------------
 API_PREFIX = "/api/v1"
 APP_VERSION = "1.0.0"
+
+logger = logging.getLogger("careerforge_api")
 ALLOWED_ORIGINS = ["http://localhost:3000"]
 SSE_HEARTBEAT_SECONDS = 15.0
 
@@ -1526,6 +1529,32 @@ except Exception:  # pragma: no cover - dup detection optional at boot
 
 
 # ===========================================================================
+# Adapter: Candidate patch generation (packages/patch_gen, Phase 9)
+# ===========================================================================
+# The LLM is OPTIONAL: candidates are generated deterministically from templates
+# when no local model is reachable (e.g. behind a VPN), and enriched by the LLM
+# when it is. Health reports "llm" | "template" | "down".
+try:
+    from careerforge_api import patch_router as _patch_router_mod
+
+    _PATCH_ROUTER: Any | None = _patch_router_mod.router
+
+    def _patch_health_label() -> str:
+        try:
+            import patch_gen  # noqa: F401
+
+            return "ready"
+        except Exception:
+            return "down"
+
+except Exception:  # pragma: no cover - patch gen optional at boot
+    _PATCH_ROUTER = None
+
+    def _patch_health_label() -> str:
+        return "down"
+
+
+# ===========================================================================
 # Error handling — contract error shape
 # ===========================================================================
 def _error_response(status_code: int, code: str, message: str, detail: Any = None) -> JSONResponse:
@@ -1536,12 +1565,73 @@ def _error_response(status_code: int, code: str, message: str, detail: Any = Non
 
 
 # ===========================================================================
+# Bootup checks — run once on startup so the operator sees, up front, exactly
+# which subsystems are live (DB/cache mocked in demo, RAG providers, GitHub
+# auth, and whether the local LLM is reachable for patch generation).
+# ===========================================================================
+async def _bootup_report() -> dict[str, Any]:
+    """Probe every subsystem and log a human-readable readiness summary."""
+    report: dict[str, Any] = {
+        "app_env": _app_env(),
+        "hardware_profile": HARDWARE_PROFILE,
+        "rag": _rag_health_label(),
+        "github": _github_health_label(),
+        "static_analysis": _analysis_health_label(),
+        "duplicates": _dup_health_label(),
+        "candidates": _patch_health_label(),
+    }
+    # Actively probe the optional local LLM (never fatal).
+    try:
+        from patch_gen import probe
+
+        report["llm"] = await probe()
+    except Exception as exc:  # pragma: no cover
+        report["llm"] = {"available": False, "mode": "template", "error": str(exc)}
+
+    llm = report["llm"]
+    logger.info("=" * 62)
+    logger.info("CareerForge AI bootup checks")
+    logger.info("  env=%s  hardware=%s", report["app_env"], report["hardware_profile"])
+    logger.info("  rag=%s  github=%s", report["rag"], report["github"])
+    logger.info(
+        "  static_analysis=%s  duplicates=%s  candidates=%s",
+        report["static_analysis"],
+        report["duplicates"],
+        report["candidates"],
+    )
+    if isinstance(llm, dict) and llm.get("available"):
+        logger.info(
+            "  local LLM: AVAILABLE (%s) — patch generation runs in LLM mode.",
+            llm.get("model"),
+        )
+    else:
+        logger.info(
+            "  local LLM: not reachable — patch generation runs in TEMPLATE mode "
+            "(fully functional; start Ollama with the model to enable LLM mode)."
+        )
+    logger.info("=" * 62)
+    return report
+
+
+@contextlib.asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Run bootup checks on startup; nothing to tear down."""
+    try:
+        _app.state.bootup = await _bootup_report()
+    except Exception as exc:  # pragma: no cover - bootup must never block serving
+        logger.warning("bootup checks failed (continuing): %s", exc)
+        _app.state.bootup = {"error": str(exc)}
+    yield
+
+
+# ===========================================================================
 # FastAPI application
 # ===========================================================================
 app = FastAPI(
     title="CareerForge AI API",
     version=APP_VERSION,
     description="Local-first multi-agent career-intelligence backend.",
+    lifespan=_lifespan,
 )
 
 app.add_middleware(
@@ -1603,6 +1693,10 @@ if _ANALYSIS_ROUTER is not None:
 if _DUP_ROUTER is not None:
     app.include_router(_DUP_ROUTER, prefix=API_PREFIX)
 
+# Candidate patch-generation router (POST /candidates/generate) — Phase 9.
+if _PATCH_ROUTER is not None:
+    app.include_router(_PATCH_ROUTER, prefix=API_PREFIX)
+
 
 # ---------------------------------------------------------------------------
 # Root banner
@@ -1649,6 +1743,8 @@ async def system_health() -> dict[str, Any]:
             "static_analysis": _analysis_health_label(),
             # Duplicate detection (Phase 8): "ready" | "down".
             "duplicates": _dup_health_label(),
+            # Candidate patch generation (Phase 9): "ready" | "down".
+            "candidates": _patch_health_label(),
         },
         "hardware_profile": HARDWARE_PROFILE,
         "flags": {
