@@ -1,0 +1,57 @@
+# Cross-platform line-ending normalization.
+# The repo is developed on macOS and transferred to / pushed from Windows.
+# Without this, Git flags every file as modified due to LF<->CRLF differences.
+#
+# Rule: store everything as LF in the repo; let Git check out the platform's
+# native ending for genuinely text files, but force LF for files that MUST be
+# LF to run (shell scripts, and files consumed by tooling that chokes on CRLF).
+
+# Default: treat as text, normalize to LF in the repo, auto native on checkout.
+* text=auto eol=lf
+
+# --- Force LF (breaks if CRLF) ---
+*.sh            text eol=lf
+*.py            text eol=lf
+*.ts            text eol=lf
+*.tsx           text eol=lf
+*.js            text eol=lf
+*.mjs           text eol=lf
+*.cjs           text eol=lf
+*.json          text eol=lf
+*.jsonc         text eol=lf
+*.css           text eol=lf
+*.md            text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.toml          text eol=lf
+*.cfg           text eol=lf
+*.ini           text eol=lf
+*.env           text eol=lf
+Dockerfile      text eol=lf
+Makefile        text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+
+# --- Force CRLF (Windows-only scripts) ---
+*.ps1           text eol=crlf
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+
+# --- Binary (never normalize / diff) ---
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary
+*.webp          binary
+*.woff          binary
+*.woff2         binary
+*.ttf           binary
+*.otf           binary
+*.pdf           binary
+*.zip           binary
+*.gz            binary
+*.docx          binary
+
+# Lockfile: keep as-is, don't diff noisily.
+package-lock.json  -diff
