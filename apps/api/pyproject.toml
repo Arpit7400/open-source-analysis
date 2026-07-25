@@ -52,6 +52,8 @@ dependencies = [
     "verify_swarm",
     # Artifact engine + opportunity miner (Phase 13).
     "artifact_engine",
+    # Restricted sandbox (Phase 6).
+    "sandbox",
 ]
 
 # Resolve the local sibling packages from the monorepo path when using uv.
@@ -66,6 +68,7 @@ dup_detect = { path = "../../packages/dup_detect", editable = true }
 patch_gen = { path = "../../packages/patch_gen", editable = true }
 verify_swarm = { path = "../../packages/verify_swarm", editable = true }
 artifact_engine = { path = "../../packages/artifact_engine", editable = true }
+sandbox = { path = "../../packages/sandbox", editable = true }
 
 [project.optional-dependencies]
 dev = [

@@ -1601,6 +1601,43 @@ except Exception:  # pragma: no cover - artifact optional at boot
 
 
 # ===========================================================================
+# Adapter: Restricted sandbox (packages/sandbox, Phase 6)
+# ===========================================================================
+# Execution is OFF by default (repository_execution flag). Health reports the
+# engine + gate state so the operator can see the safety posture at a glance.
+try:
+    from careerforge_api import sandbox_router as _sandbox_router_mod
+
+    _SANDBOX_ROUTER: Any | None = _sandbox_router_mod.router
+
+    def _sandbox_health_label() -> str:
+        try:
+            from sandbox import container_engine
+
+            flag = bool(_settings_flags_repo_exec())
+            engine = container_engine()
+            if flag and engine:
+                return f"armed:{engine}"
+            return "ready" if engine else "ready-no-engine"
+        except Exception:
+            return "down"
+
+except Exception:  # pragma: no cover - sandbox optional at boot
+    _SANDBOX_ROUTER = None
+
+    def _sandbox_health_label() -> str:
+        return "down"
+
+
+def _settings_flags_repo_exec() -> bool:
+    """Best-effort read of the repository_execution flag for health/bootup."""
+    try:
+        return bool(SETTINGS.flags.repository_execution)
+    except Exception:
+        return False
+
+
+# ===========================================================================
 # Error handling — contract error shape
 # ===========================================================================
 def _error_response(status_code: int, code: str, message: str, detail: Any = None) -> JSONResponse:
@@ -1627,6 +1664,8 @@ async def _bootup_report() -> dict[str, Any]:
         "candidates": _patch_health_label(),
         "verifications": _verify_health_label(),
         "artifacts": _artifact_health_label(),
+        "sandbox": _sandbox_health_label(),
+        "repository_execution": _settings_flags_repo_exec(),
     }
     # Actively probe the optional local LLM (never fatal).
     try:
@@ -1647,6 +1686,13 @@ async def _bootup_report() -> dict[str, Any]:
         report["duplicates"],
         report["candidates"],
         report["verifications"],
+    )
+    logger.info(
+        "  artifacts=%s  sandbox=%s  repository_execution=%s (untrusted-code execution %s)",
+        report["artifacts"],
+        report["sandbox"],
+        report["repository_execution"],
+        "ENABLED" if report["repository_execution"] else "DISABLED — safe default",
     )
     if isinstance(llm, dict) and llm.get("available"):
         logger.info(
@@ -1755,6 +1801,11 @@ if _VERIFY_ROUTER is not None:
 if _ARTIFACT_ROUTER is not None:
     app.include_router(_ARTIFACT_ROUTER, prefix=API_PREFIX)
 
+# Sandbox router (POST /sandbox/preflight, /sandbox/policy-check,
+# GET /sandbox/status) — Phase 6. Execution gated behind the flag.
+if _SANDBOX_ROUTER is not None:
+    app.include_router(_SANDBOX_ROUTER, prefix=API_PREFIX)
+
 
 # ---------------------------------------------------------------------------
 # Root banner
@@ -1807,6 +1858,8 @@ async def system_health() -> dict[str, Any]:
             "verifications": _verify_health_label(),
             # Artifact engine + opportunity miner (Phase 13): "ready" | "down".
             "artifacts": _artifact_health_label(),
+            # Sandbox (Phase 6): "ready" | "ready-no-engine" | "armed:<engine>" | "down".
+            "sandbox": _sandbox_health_label(),
         },
         "hardware_profile": HARDWARE_PROFILE,
         "flags": {
