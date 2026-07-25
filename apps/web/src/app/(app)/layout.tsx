@@ -15,6 +15,7 @@ import {
   Bot,
   ShieldAlert,
   ShieldCheck,
+  BadgeCheck,
 } from "lucide-react";
 import * as api from "@/lib/api";
 import type { Health, Resources } from "@/lib/types";
@@ -32,6 +33,7 @@ const NAV: readonly NavItem[] = [
   { href: "/lab", label: "Contribution Lab", icon: FlaskConical },
   { href: "/skills", label: "Skills", icon: Radar },
   { href: "/pulse", label: "Pulse", icon: Activity },
+  { href: "/portfolio", label: "Portfolio", icon: BadgeCheck },
 ] as const;
 
 type HealthTone = "green" | "amber" | "red";
