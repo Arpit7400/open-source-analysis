@@ -48,6 +48,8 @@ dependencies = [
     "dup_detect",
     # Candidate patch generation (Phase 9).
     "patch_gen",
+    # Verification swarm (Phase 10).
+    "verify_swarm",
 ]
 
 # Resolve the local sibling packages from the monorepo path when using uv.
@@ -60,6 +62,7 @@ github_client = { path = "../../packages/github_client", editable = true }
 static_analysis = { path = "../../packages/static_analysis", editable = true }
 dup_detect = { path = "../../packages/dup_detect", editable = true }
 patch_gen = { path = "../../packages/patch_gen", editable = true }
+verify_swarm = { path = "../../packages/verify_swarm", editable = true }
 
 [project.optional-dependencies]
 dev = [

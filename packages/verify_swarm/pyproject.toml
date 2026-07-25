@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "verify_swarm"
+version = "0.1.0"
+description = "Independent verification swarm for CareerForge AI (Phase 10): verify candidate patches, then a quality gate."
+requires-python = ">=3.12"
+readme = "README.md"
+dependencies = [
+    "pydantic>=2.7",
+    "patch_gen",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[tool.uv.sources]
+patch_gen = { path = "../patch_gen", editable = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["verify_swarm"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "TC", "RUF"]
+ignore = ["E501", "UP042", "RUF022", "TC001", "TC002", "TC003"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["verify_swarm"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+explicit_package_bases = true
+mypy_path = "."
+strict = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

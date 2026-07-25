@@ -1555,6 +1555,29 @@ except Exception:  # pragma: no cover - patch gen optional at boot
 
 
 # ===========================================================================
+# Adapter: Verification swarm (packages/verify_swarm, Phase 10)
+# ===========================================================================
+try:
+    from careerforge_api import verify_router as _verify_router_mod
+
+    _VERIFY_ROUTER: Any | None = _verify_router_mod.router
+
+    def _verify_health_label() -> str:
+        try:
+            import verify_swarm  # noqa: F401
+
+            return "ready"
+        except Exception:
+            return "down"
+
+except Exception:  # pragma: no cover - verify optional at boot
+    _VERIFY_ROUTER = None
+
+    def _verify_health_label() -> str:
+        return "down"
+
+
+# ===========================================================================
 # Error handling — contract error shape
 # ===========================================================================
 def _error_response(status_code: int, code: str, message: str, detail: Any = None) -> JSONResponse:
@@ -1579,6 +1602,7 @@ async def _bootup_report() -> dict[str, Any]:
         "static_analysis": _analysis_health_label(),
         "duplicates": _dup_health_label(),
         "candidates": _patch_health_label(),
+        "verifications": _verify_health_label(),
     }
     # Actively probe the optional local LLM (never fatal).
     try:
@@ -1594,10 +1618,11 @@ async def _bootup_report() -> dict[str, Any]:
     logger.info("  env=%s  hardware=%s", report["app_env"], report["hardware_profile"])
     logger.info("  rag=%s  github=%s", report["rag"], report["github"])
     logger.info(
-        "  static_analysis=%s  duplicates=%s  candidates=%s",
+        "  static_analysis=%s  duplicates=%s  candidates=%s  verifications=%s",
         report["static_analysis"],
         report["duplicates"],
         report["candidates"],
+        report["verifications"],
     )
     if isinstance(llm, dict) and llm.get("available"):
         logger.info(
@@ -1697,6 +1722,10 @@ if _DUP_ROUTER is not None:
 if _PATCH_ROUTER is not None:
     app.include_router(_PATCH_ROUTER, prefix=API_PREFIX)
 
+# Verification-swarm router (POST /verifications/run) — Phase 10.
+if _VERIFY_ROUTER is not None:
+    app.include_router(_VERIFY_ROUTER, prefix=API_PREFIX)
+
 
 # ---------------------------------------------------------------------------
 # Root banner
@@ -1745,6 +1774,8 @@ async def system_health() -> dict[str, Any]:
             "duplicates": _dup_health_label(),
             # Candidate patch generation (Phase 9): "ready" | "down".
             "candidates": _patch_health_label(),
+            # Verification swarm (Phase 10): "ready" | "down".
+            "verifications": _verify_health_label(),
         },
         "hardware_profile": HARDWARE_PROFILE,
         "flags": {
