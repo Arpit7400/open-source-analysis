@@ -30,6 +30,7 @@ _ALL_SERVICES = {
     "artifacts",
     "sandbox",
     "runtime",
+    "observability",
     *_MOCKABLE_SERVICES,
 }
 
@@ -66,6 +67,8 @@ def test_health_returns_200_and_contract_shape() -> None:
     assert isinstance(services["sandbox"], str) and services["sandbox"]
     # runtime (Phase 7) reports "ready" | "down".
     assert services["runtime"] in {"ready", "down"}
+    # observability (Phase 14) reports "builtin" | "opentelemetry" | "down".
+    assert services["observability"] in {"builtin", "opentelemetry", "down"}
 
     # Hardware profile must be one of the four contract values.
     assert body["hardware_profile"] in _VALID_PROFILES

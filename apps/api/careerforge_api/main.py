@@ -1661,6 +1661,26 @@ def _settings_flags_repo_exec() -> bool:
 
 
 # ===========================================================================
+# Adapter: Observability (packages/observability, Phase 14)
+# ===========================================================================
+try:
+    from observability import get_telemetry as _get_telemetry
+
+    def _telemetry_backend() -> str:
+        try:
+            return _get_telemetry().backend
+        except Exception:
+            return "down"
+
+    _OBSERVABILITY_OK = True
+except Exception:  # pragma: no cover - observability optional at boot
+    _OBSERVABILITY_OK = False
+
+    def _telemetry_backend() -> str:
+        return "down"
+
+
+# ===========================================================================
 # Error handling — contract error shape
 # ===========================================================================
 def _error_response(status_code: int, code: str, message: str, detail: Any = None) -> JSONResponse:
@@ -1689,6 +1709,7 @@ async def _bootup_report() -> dict[str, Any]:
         "artifacts": _artifact_health_label(),
         "sandbox": _sandbox_health_label(),
         "runtime": _runtime_health_label(),
+        "observability": _telemetry_backend(),
         "repository_execution": _settings_flags_repo_exec(),
     }
     # Actively probe the optional local LLM (never fatal).
@@ -1712,9 +1733,14 @@ async def _bootup_report() -> dict[str, Any]:
         report["verifications"],
     )
     logger.info(
-        "  artifacts=%s  sandbox=%s  repository_execution=%s (untrusted-code execution %s)",
+        "  artifacts=%s  sandbox=%s  runtime=%s  observability=%s",
         report["artifacts"],
         report["sandbox"],
+        report["runtime"],
+        report["observability"],
+    )
+    logger.info(
+        "  repository_execution=%s (untrusted-code execution %s)",
         report["repository_execution"],
         "ENABLED" if report["repository_execution"] else "DISABLED — safe default",
     )
@@ -1762,6 +1788,22 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Observability middleware — one span per HTTP request (Phase 14). Records
+# method, path, and status; never records headers/secrets. No-op if the
+# observability package is unavailable.
+# ---------------------------------------------------------------------------
+if _OBSERVABILITY_OK:
+
+    @app.middleware("http")
+    async def _telemetry_middleware(request: Request, call_next: Any) -> Any:
+        tel = _get_telemetry()
+        with tel.span("http.request", method=request.method, path=request.url.path) as attrs:
+            response = await call_next(request)
+            attrs["status_code"] = response.status_code
+            return response
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -1891,6 +1933,8 @@ async def system_health() -> dict[str, Any]:
             "sandbox": _sandbox_health_label(),
             # Runtime investigation (Phase 7): "ready" | "down".
             "runtime": _runtime_health_label(),
+            # Observability (Phase 14): "builtin" | "opentelemetry" | "down".
+            "observability": _telemetry_backend(),
         },
         "hardware_profile": HARDWARE_PROFILE,
         "flags": {
@@ -1904,6 +1948,18 @@ async def system_health() -> dict[str, Any]:
 async def system_resources() -> dict[str, Any]:
     active = _active_agent_count()
     return _live_resources(active_agents=active, max_agents=_max_agents())
+
+
+@app.get(f"{API_PREFIX}/system/metrics")
+async def system_metrics() -> dict[str, Any]:
+    """Observability snapshot (Phase 14): recent spans + metric aggregates.
+
+    Uses the built-in in-process recorder, or OpenTelemetry when configured.
+    Reports ``{"backend": "down"}`` if the observability package is missing.
+    """
+    if not _OBSERVABILITY_OK:
+        return {"backend": "down", "recent_spans": [], "counters": {}, "histograms": {}}
+    return _get_telemetry().snapshot()
 
 
 def _active_agent_count() -> int:

@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "observability"
+version = "0.1.0"
+description = "Observability for CareerForge AI (Phase 14): spans + metrics with a zero-dep default tracer, upgrading to OpenTelemetry when installed."
+requires-python = ">=3.12"
+readme = "README.md"
+dependencies = [
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+# Install these to export real OpenTelemetry traces; the package works without them.
+otel = [
+    "opentelemetry-api>=1.20",
+    "opentelemetry-sdk>=1.20",
+]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["observability"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "TC", "RUF"]
+ignore = ["E501", "UP042", "RUF022", "TC001", "TC002", "TC003"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["observability"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+explicit_package_bases = true
+mypy_path = "."
+strict = true
+
+# opentelemetry is an OPTIONAL dependency (see [project.optional-dependencies]
+# .otel); the module is imported behind a guard, so a missing stub is expected
+# when it is not installed.
+[[tool.mypy.overrides]]
+module = ["opentelemetry.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
