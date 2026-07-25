@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Skill-to-artifact engine + contribution opportunity miner for CareerForge AI (Phase 13)."
 requires-python = ">=3.12"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Arpit Sahu" }]
 dependencies = [
     "pydantic>=2.7",
 ]

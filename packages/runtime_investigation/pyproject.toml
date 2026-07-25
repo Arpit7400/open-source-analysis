@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Runtime investigation agents for CareerForge AI (Phase 7): env detect, install, tests, lint/type, warnings, reproduction -- all via the gated sandbox."
 requires-python = ">=3.12"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Arpit Sahu" }]
 dependencies = [
     "pydantic>=2.7",
     "sandbox",

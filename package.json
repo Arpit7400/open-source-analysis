@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "CareerForge AI — local-first multi-agent career-intelligence platform (flagship vertical slice).",
+  "author": "Arpit Sahu",
   "license": "MIT",
   "workspaces": [
     "apps/web"

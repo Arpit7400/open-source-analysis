@@ -281,6 +281,9 @@ careerforge-ai/
 └── .env.example       Demo-friendly defaults
 ```
 
-## License
+## Author & License
 
-MIT.
+**Author / copyright holder:** Arpit Sahu.
+
+Copyright (c) 2026 Arpit Sahu. All rights reserved. Released under the
+[MIT License](LICENSE) — see [`LICENSE`](LICENSE) and [`AUTHORS`](AUTHORS).

@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Independent verification swarm for CareerForge AI (Phase 10): verify candidate patches, then a quality gate."
 requires-python = ">=3.12"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Arpit Sahu" }]
 dependencies = [
     "pydantic>=2.7",
     "patch_gen",

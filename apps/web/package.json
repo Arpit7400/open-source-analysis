@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "description": "CareerForge AI — local-first multi-agent career-intelligence console (frontend).",
+  "author": "Arpit Sahu",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

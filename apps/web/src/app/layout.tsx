@@ -25,6 +25,9 @@ export const metadata: Metadata = {
   description:
     "Local-first multi-agent career-intelligence platform. A dark technical operations console for repository intelligence, skill verification, and industry pulse.",
   applicationName: "CareerForge AI",
+  authors: [{ name: "Arpit Sahu" }],
+  creator: "Arpit Sahu",
+  publisher: "Arpit Sahu",
   metadataBase: new URL("http://localhost:3000"),
   openGraph: {
     title: "CareerForge AI — Engineering Command Center",

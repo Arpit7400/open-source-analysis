@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Restricted repository sandbox for CareerForge AI (Phase 6): static safety preflight, command policy, non-root Docker execution."
 requires-python = ">=3.12"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Arpit Sahu" }]
 dependencies = [
     "pydantic>=2.7",
 ]

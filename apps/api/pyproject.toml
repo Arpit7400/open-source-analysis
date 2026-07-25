@@ -5,7 +5,7 @@ description = "CareerForge AI — local-first multi-agent career-intelligence ba
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-authors = [{ name = "CareerForge AI" }]
+authors = [{ name = "Arpit Sahu" }]
 keywords = ["career", "ai", "multi-agent", "fastapi", "local-first"]
 classifiers = [
     "Programming Language :: Python :: 3",

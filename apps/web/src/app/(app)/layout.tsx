@@ -28,6 +28,9 @@ interface NavItem {
   icon: typeof Network;
 }
 
+/** Fixed copyright year (constant so SSR and client render identically). */
+const COPYRIGHT_YEAR = 2026;
+
 const NAV: readonly NavItem[] = [
   { href: "/command", label: "Command Center", icon: Network },
   { href: "/lab", label: "Contribution Lab", icon: FlaskConical },
@@ -276,6 +279,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       >
         {children}
       </motion.main>
+
+      {/* ---- Global footer: ownership / copyright ------------------------ */}
+      <footer className="hairline border-x-0 border-b-0 px-4 py-3 text-center text-xs text-[var(--text-muted)]">
+        © {COPYRIGHT_YEAR} CareerForge AI — All rights reserved by Arpit Sahu.
+      </footer>
     </div>
   );
 }

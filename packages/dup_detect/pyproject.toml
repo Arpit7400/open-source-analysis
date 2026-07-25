@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Duplicate issue/PR detection for CareerForge AI (Phase 8): exact-signal + semantic similarity."
 requires-python = ">=3.12"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Arpit Sahu" }]
 dependencies = [
     "pydantic>=2.7",
 ]

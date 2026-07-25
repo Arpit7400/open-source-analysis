@@ -201,6 +201,11 @@ export default function LandingPage() {
             })}
           </div>
         </motion.div>
+
+        {/* ---- Ownership / copyright ------------------------------------ */}
+        <footer className="mt-10 text-center text-xs text-[color:var(--text-muted)]">
+          © 2026 CareerForge AI — All rights reserved by Arpit Sahu.
+        </footer>
       </main>
     </>
   );

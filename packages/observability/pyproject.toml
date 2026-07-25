@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Observability for CareerForge AI (Phase 14): spans + metrics with a zero-dep default tracer, upgrading to OpenTelemetry when installed."
 requires-python = ">=3.12"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Arpit Sahu" }]
 dependencies = [
     "pydantic>=2.7",
 ]

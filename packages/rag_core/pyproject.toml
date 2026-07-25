@@ -9,7 +9,7 @@ description = "Real RAG + code-indexing subsystem for CareerForge AI (embeddings
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-authors = [{ name = "CareerForge AI" }]
+authors = [{ name = "Arpit Sahu" }]
 dependencies = [
     "pydantic>=2",
     "pydantic-settings>=2",
