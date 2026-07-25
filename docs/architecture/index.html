@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<!--
+  CareerForge AI — Architecture & Decision Guide (standalone).
+  Author / copyright holder: Arpit Sahu. Copyright (c) 2026 Arpit Sahu. MIT License.
+  Self-contained: no build step. Open via file:// in any browser.
+  Kept in sync with docs/architecture/ARCHITECTURE.md (same content + diagrams).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="author" content="Arpit Sahu" />
+<title>CareerForge AI — Architecture &amp; Decision Guide</title>
+<style>
+  /* ---- Design tokens: pulled verbatim from apps/web/src/app/globals.css ---- */
+  :root{
+    --bg-void:#05070d; --bg-base:#0a0e17; --bg-panel:#0e1420; --bg-elevated:#131b2b;
+    --glass:rgba(18,26,42,0.55);
+    --border-hair:rgba(120,160,220,0.12); --border-glow:rgba(80,200,255,0.35);
+    --text-primary:#e6edf7; --text-secondary:#93a4bd; --text-muted:#556274;
+    --accent-cyan:#22d3ee; --accent-cyan-dim:#0e7490; --accent-violet:#a78bfa;
+    --accent-amber:#fbbf24; --accent-emerald:#34d399; --accent-rose:#fb7185; --accent-blue:#60a5fa;
+    --radius:12px; --radius-sm:8px; --radius-lg:18px; --nav-w:280px;
+    --font-sans:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(34,211,238,0.06), transparent 60%),
+      radial-gradient(900px 500px at 0% 100%, rgba(167,139,250,0.06), transparent 60%),
+      var(--bg-base);
+    color:var(--text-primary); font-family:var(--font-sans);
+    line-height:1.62; font-size:15.5px;
+  }
+  a{color:var(--accent-cyan); text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,pre,.mono{font-family:var(--font-mono)}
+  code{background:var(--bg-elevated); padding:.1em .4em; border-radius:6px; font-size:.88em; color:var(--accent-cyan)}
+
+  /* ---- Layout: sticky ToC sidebar + content ---- */
+  .layout{display:grid; grid-template-columns:var(--nav-w) minmax(0,1fr); gap:0; align-items:start}
+  nav.toc{
+    position:sticky; top:0; height:100vh; overflow-y:auto; padding:22px 16px;
+    background:var(--bg-panel); border-right:1px solid var(--border-hair);
+  }
+  nav.toc h1{font-size:15px; letter-spacing:.02em; margin:0 0 2px}
+  nav.toc .sub{color:var(--text-muted); font-size:11.5px; margin-bottom:16px; font-family:var(--font-mono)}
+  nav.toc a{display:block; color:var(--text-secondary); padding:5px 10px; border-radius:8px; font-size:13.5px; border-left:2px solid transparent}
+  nav.toc a:hover{background:var(--bg-elevated); text-decoration:none; color:var(--text-primary)}
+  nav.toc a.lvl2{padding-left:22px; font-size:12.5px; color:var(--text-muted)}
+  main{padding:40px 48px 120px; max-width:1080px}
+  @media(max-width:900px){
+    .layout{grid-template-columns:1fr}
+    nav.toc{position:relative; height:auto; border-right:none; border-bottom:1px solid var(--border-hair)}
+    main{padding:24px 18px 80px}
+  }
+
+  h1.title{font-size:30px; letter-spacing:-.01em; margin:0 0 6px}
+  .byline{color:var(--text-muted); font-family:var(--font-mono); font-size:12.5px; margin-bottom:26px}
+  h2{font-size:22px; margin:44px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--border-hair); scroll-margin-top:16px}
+  h3{font-size:17px; margin:26px 0 8px; color:var(--text-primary); scroll-margin-top:16px}
+  h4{font-size:14px; margin:18px 0 6px; color:var(--accent-cyan); text-transform:uppercase; letter-spacing:.06em}
+  p,li{color:var(--text-primary)}
+  ul,ol{padding-left:22px}
+
+  .eyebrow{display:inline-block; font-family:var(--font-mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-cyan); border:1px solid var(--border-hair); padding:3px 9px; border-radius:999px; margin-bottom:10px}
+
+  /* ---- Callouts ---- */
+  .callout{border-radius:var(--radius); padding:14px 16px; margin:16px 0; border:1px solid var(--border-hair); background:var(--glass)}
+  .callout.key{border-left:3px solid var(--accent-cyan)}
+  .callout.warn{border-left:3px solid var(--accent-amber)}
+  .callout.danger{border-left:3px solid var(--accent-rose)}
+  .callout.note{border-left:3px solid var(--accent-violet)}
+  .callout .lbl{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-secondary); display:block; margin-bottom:4px}
+
+  /* ---- Tables ---- */
+  table{border-collapse:collapse; width:100%; margin:14px 0; font-size:13.5px; background:var(--bg-panel); border-radius:var(--radius); overflow:hidden; display:block; overflow-x:auto}
+  thead th{background:var(--bg-elevated); color:var(--text-secondary); text-align:left; font-weight:600; font-size:12px; letter-spacing:.04em; text-transform:uppercase}
+  th,td{padding:9px 12px; border-bottom:1px solid var(--border-hair); vertical-align:top}
+  tbody tr:hover{background:var(--bg-elevated)}
+  td code{white-space:nowrap}
+
+  /* ---- Status pills ---- */
+  .pill{display:inline-block; font-family:var(--font-mono); font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid; white-space:nowrap}
+  .pill.green{color:var(--accent-emerald); border-color:var(--accent-emerald); background:rgba(52,211,153,.08)}
+  .pill.amber{color:var(--accent-amber); border-color:var(--accent-amber); background:rgba(251,191,36,.08)}
+  .pill.red{color:var(--accent-rose); border-color:var(--accent-rose); background:rgba(251,113,133,.08)}
+  .pill.cyan{color:var(--accent-cyan); border-color:var(--accent-cyan); background:rgba(34,211,238,.08)}
+  .pill.violet{color:var(--accent-violet); border-color:var(--accent-violet); background:rgba(167,139,250,.08)}
+
+  /* ---- Mermaid host + offline fallback ---- */
+  .diagram{background:var(--bg-panel); border:1px solid var(--border-hair); border-radius:var(--radius); padding:14px; margin:16px 0; overflow-x:auto}
+  .diagram .mmd-fallback{display:none}
+  .diagram.failed pre.mmd-fallback{display:block; margin:0; white-space:pre; color:var(--text-secondary); font-size:12.5px}
+  .diagram.failed .mmd-notice{display:block; color:var(--accent-amber); font-family:var(--font-mono); font-size:12px; margin-bottom:8px}
+  .mmd-notice{display:none}
+
+  hr{border:none; border-top:1px solid var(--border-hair); margin:36px 0}
+  .footer{color:var(--text-muted); font-size:12.5px; font-family:var(--font-mono); margin-top:40px; border-top:1px solid var(--border-hair); padding-top:16px}
+  .legend{font-size:12.5px; color:var(--text-secondary); margin:6px 0 14px}
+  .legend b{color:var(--text-primary)}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" aria-label="Table of contents">
+    <h1>CareerForge AI</h1>
+    <div class="sub">Architecture &amp; Decisions</div>
+    <a href="#mental-model">1 · Mental model</a>
+    <a href="#mindmap">2 · System mindmap</a>
+    <a href="#components">3 · Component map</a>
+    <a href="#rules">4 · Golden rules</a>
+    <a href="#e2e" >5 · End-to-end flow</a>
+    <a href="#decisions">6 · Decision register</a>
+    <a href="#deep" >7 · Subsystem deep dives</a>
+    <a href="#er">8 · Data model (ER)</a>
+    <a href="#changes">9 · Common changes</a>
+    <a href="#glossary">10 · Glossary</a>
+    <a href="#verified" class="lvl2">Appendix · Verified facts</a>
+    <a href="#discrepancies" class="lvl2">Known discrepancies</a>
+  </nav>
+
+  <main>
+    <span class="eyebrow">Principal-engineer guide</span>
+    <h1 class="title">CareerForge AI — Architecture &amp; Decision Guide</h1>
+    <div class="byline">Author &amp; © Arpit Sahu · MIT · verified against code, manifests, ADRs &amp; tests · in sync with ARCHITECTURE.md</div>
+
+    <div class="callout note">
+      <span class="lbl">Audience</span>
+      An engineer who needs to understand, modify, or explain any part of the system — and answer <em>"why was it built this way?"</em> — without reading the source first. Every fact was verified against the code, the <code>pyproject.toml</code>/<code>package.json</code> manifests, the three ADRs, and the test suites.
+    </div>
+
+    <!-- 1 -->
+    <h2 id="mental-model">1 · Mental model</h2>
+    <p>CareerForge AI is a <b>local-first, modular-monolith</b> platform that turns information into <em>verified career evidence</em>: it analyzes a GitHub repository through a multi-stage <b>mission</b> (intake → static analysis → runtime → aggregate → duplicate-check → fix → <b>independent verification</b> → <b>human approval</b>), and separately maintains an evidence-backed skill profile, an industry-pulse feed, artifact assignments, and a public portfolio. The backend is one FastAPI deployable (<code>apps/api</code>, package <code>careerforge_api</code>) that streams a live mission to a Next.js console (<code>apps/web</code>) over <b>Server-Sent Events</b>; each real capability is its own installable package under <code>packages/</code>.</p>
+    <div class="callout key">
+      <span class="lbl">The one sentence that explains most of the design</span>
+      <b>Use the real provider when it's present, a dependency-free fallback when it isn't — so the whole system runs anywhere with just Python + Node, while the wire contract stays identical to the fully-provisioned deployment.</b>
+    </div>
+    <p>That principle explains the <code>demo</code> runtime that scripts a realistic mission (ADR-0003); embeddings falling back Ollama→hash; the vector store falling back Qdrant-server→in-process <code>:memory:</code>; the sandbox no-op'ing safely without Docker; observability falling back OpenTelemetry→in-memory tracer; and every subsystem being <em>optional behind an interface</em> that reports its live mode in <code>GET /system/health</code>.</p>
+
+    <!-- 2 -->
+    <h2 id="mindmap">2 · System mindmap</h2>
+    <div class="diagram"><div class="mmd-notice"></div><pre class="mermaid">mindmap
+  root((CareerForge AI))
+    Transport
+      FastAPI app careerforge_api
+      SSE mission stream
+      34 REST routes under /api/v1
+      Next.js console apps/web
+    Mission engine
+      MissionStore append-only buffer
+      MissionSimulator deterministic
+      Last-Event-ID replay
+      Human approval gate
+    Contribution engine packages
+      static_analysis P5
+      dup_detect P8
+      patch_gen P9
+      verify_swarm P10
+      sandbox P6 gated
+      runtime_investigation P7
+    Knowledge packages
+      rag_core P2 P4
+      github_client P3
+      artifact_engine P13
+    Cross cutting
+      config CAREERFORGE_ env
+      observability P14
+      safety flags off by default
+      146 tests
+    Frontend screens
+      Command Center React Flow
+      Contribution Lab Monaco
+      Skill Constellation R3F
+      Industry Pulse ECharts
+      Public Portfolio</pre></div>
+
+    <!-- 3 -->
+    <h2 id="components">3 · Layered component map</h2>
+    <p class="legend">Color = role: <b style="color:#22d3ee">frontend</b> · <b style="color:#a78bfa">transport</b> · <b style="color:#34d399">engine / package</b> · <b style="color:#fb7185">security-gated</b> · <b style="color:#fbbf24">cross-cutting</b> · <b style="color:#93a4bd">external (optional)</b>. Each package is an optional dependency behind a typed interface.</p>
+    <div class="diagram"><div class="mmd-notice"></div><pre class="mermaid">flowchart TB
+  subgraph FE["Frontend · apps/web (Next.js 14)"]
+    direction LR
+    UI_CMD["Command Center<br/>React Flow"]:::fe
+    UI_LAB["Contribution Lab<br/>Monaco"]:::fe
+    UI_SKILL["Skill Constellation<br/>R3F"]:::fe
+    UI_PULSE["Industry Pulse<br/>ECharts"]:::fe
+    UI_PORT["Public Portfolio"]:::fe
+    LIB["lib: api.ts · store.ts (Zustand)<br/>useMissionStream · mockMission"]:::felib
+  end
+  subgraph API["Transport · apps/api (FastAPI)"]
+    MAIN["main.py<br/>HTTP + SSE only"]:::api
+    SCHEMAS["schemas.py<br/>36 models · 17 enums"]:::api
+    CONFIG["config.py<br/>CAREERFORGE_ settings + flags"]:::api
+  end
+  subgraph ENGINE["Mission engine · careerforge_api"]
+    STORE["MissionStore<br/>append-only + replay"]:::engine
+    SIM["MissionSimulator<br/>deterministic script"]:::engine
+  end
+  subgraph CONTRIB["Contribution-engine packages"]
+    SA["static_analysis"]:::pkg
+    DD["dup_detect"]:::pkg
+    PG["patch_gen"]:::pkg
+    VS["verify_swarm"]:::pkg
+    SB["sandbox (gated)"]:::danger
+    RI["runtime_investigation"]:::pkg
+  end
+  subgraph KNOW["Knowledge packages"]
+    RAG["rag_core"]:::pkg
+    GH["github_client (read-only)"]:::pkg
+    AE["artifact_engine"]:::pkg
+  end
+  OBS["observability"]:::cross
+  subgraph EXT["External stores · optional · docker-compose"]
+    OLLAMA[("Ollama")]:::ext
+    QDRANT[("Qdrant")]:::ext
+    PG_DB[("Postgres")]:::ext
+    REDIS[("Redis")]:::ext
+    TEMPORAL[("Temporal")]:::ext
+    GHAPI[("GitHub API")]:::ext
+    DOCKER[("Docker/Podman")]:::ext
+  end
+  LIB -->|"REST + SSE"| MAIN
+  UI_CMD --- LIB
+  UI_LAB --- LIB
+  UI_SKILL --- LIB
+  UI_PULSE --- LIB
+  UI_PORT --- LIB
+  MAIN --> SCHEMAS
+  MAIN --> CONFIG
+  MAIN --> STORE
+  STORE --> SIM
+  MAIN --> CONTRIB
+  MAIN --> KNOW
+  MAIN -.-> OBS
+  RAG -.->|"if reachable"| OLLAMA
+  RAG -.->|"else :memory:"| QDRANT
+  GH -.-> GHAPI
+  RI --> SB
+  SB -.->|"if flag on"| DOCKER
+  MAIN -.-> PG_DB
+  MAIN -.-> REDIS
+  MAIN -.-> TEMPORAL
+  classDef fe fill:#0e1420,stroke:#22d3ee,color:#e6edf7;
+  classDef felib fill:#0e1420,stroke:#60a5fa,color:#e6edf7;
+  classDef api fill:#131b2b,stroke:#a78bfa,color:#e6edf7;
+  classDef engine fill:#131b2b,stroke:#34d399,color:#e6edf7;
+  classDef pkg fill:#0e1420,stroke:#34d399,color:#e6edf7;
+  classDef danger fill:#0e1420,stroke:#fb7185,color:#e6edf7;
+  classDef cross fill:#0e1420,stroke:#fbbf24,color:#e6edf7;
+  classDef ext fill:#05070d,stroke:#556274,color:#93a4bd;</pre></div>
+    <div class="callout note"><span class="lbl">Why this shape · ADR-0001</span>A modular monolith — one backend + one frontend with strong internal seams — gives local-first operability (two processes, no infra) <em>and</em> clean ownership boundaries, without the operational cost of microservices for a single-developer target. <code>main.py</code> owns only HTTP/SSE; domain logic lives in sibling modules and <code>packages/</code>; heavy capabilities are optional deps behind interfaces so demo mode always runs.</div>
+
+    <!-- 4 -->
+    <h2 id="rules">4 · Golden rules (invariants)</h2>
+
+    <h3>Rule 1 — Real-when-present, fallback-when-absent; the contract never changes</h3>
+    <div class="diagram"><div class="mmd-notice"></div><pre class="mermaid">flowchart LR
+  Q{"Provider reachable?"}:::api
+  Q -->|yes| REAL["Real provider<br/>Ollama · Qdrant server · Docker · OTel"]:::engine
+  Q -->|no| FB["Deterministic fallback<br/>hash embedder · :memory: · no-op · in-mem tracer"]:::pkg
+  REAL --> SAME["Same typed output / SSE contract"]:::cross
+  FB --> SAME
+  classDef api fill:#131b2b,stroke:#a78bfa,color:#e6edf7;
+  classDef engine fill:#131b2b,stroke:#34d399,color:#e6edf7;
+  classDef pkg fill:#0e1420,stroke:#34d399,color:#e6edf7;
+  classDef cross fill:#0e1420,stroke:#fbbf24,color:#e6edf7;</pre></div>
+
+    <h3>Rule 2 — Nothing dangerous happens without an explicit gate</h3>
+    <div class="callout danger"><span class="lbl">Safety default</span><code>github_writes</code> and <code>repository_execution</code> are <span class="pill red">false</span> by default. The approval endpoint <b>hard-overrides</b> <code>github_write=False</code>. The sandbox refuses unless flag ON <b>and</b> engine present <b>and</b> policy passes; a HIGH-risk preflight blocks regardless of the flag.</div>
+    <div class="diagram"><div class="mmd-notice"></div><pre class="mermaid">flowchart TB
+  CMD["requested action<br/>(github write / repo exec)"]:::api
+  F{"feature flag ON?"}:::danger
+  P{"policy / preflight pass?"}:::danger
+  E{"engine present?"}:::danger
+  CMD --> F -->|no| STOP["refused · audited · github_write=False"]:::danger
+  F -->|yes| P -->|no| STOP
+  P -->|yes| E -->|no| STOP
+  E -->|yes| GO["execute, hardened + audited"]:::engine
+  classDef api fill:#131b2b,stroke:#a78bfa,color:#e6edf7;
+  classDef danger fill:#0e1420,stroke:#fb7185,color:#e6edf7;
+  classDef engine fill:#131b2b,stroke:#34d399,color:#e6edf7;</pre></div>
+
+    <h3>Rule 3 — A fix agent may never verify its own candidate</h3>
+    <div class="diagram"><div class="mmd-notice"></div><pre class="mermaid">flowchart LR
+  FIXA["fix.a"]:::pkg --> CAND["Candidate"]:::api
+  FIXB["fix.b"]:::pkg --> CAND
+  CAND --> VS["verify.syntax/scope/lint/type/adversary<br/>(never a fix.* author)"]:::engine
+  VS --> GATE{"any critical FAIL?"}:::danger
+  GATE -->|yes| REJ["REJECTED"]:::danger
+  GATE -->|no| ACC["ACCEPTED"]:::engine
+  classDef pkg fill:#0e1420,stroke:#34d399,color:#e6edf7;
+  classDef api fill:#131b2b,stroke:#a78bfa,color:#e6edf7;
+  classDef engine fill:#131b2b,stroke:#34d399,color:#e6edf7;
+  classDef danger fill:#0e1420,stroke:#fb7185,color:#e6edf7;</pre></div>
+
+    <!-- 5 -->
+    <h2 id="e2e">5 · Representative end-to-end flow — a repository mission</h2>
+    <div class="diagram"><div class="mmd-notice"></div><pre class="mermaid">sequenceDiagram
+  autonumber
+  actor U as User (browser)
+  participant W as apps/web (command page)
+  participant A as FastAPI main.py
+  participant E as ENGINE (MissionStore + Simulator)
+  participant S as SSE /events/stream
+  U->>W: enter repo URL, click Analyze
+  W->>A: POST /api/v1/repositories/analyze {repo_url}
+  A->>E: ENGINE.create(repo_url)  (uuid mission_id)
+  A-->>W: 202 {mission_id, status:"QUEUED"}
+  A->>E: asyncio.create_task(ENGINE.run(...))  (background)
+  W->>S: EventSource /events/stream?mission_id=...
+  S-->>W: event:resource (immediate, gauges non-empty)
+  loop scripted stages (Intake to Verify)
+    E->>E: store.append(event) then fold into live state
+    S-->>W: id:N event:agent.update / finding.new / candidate.update
+    W->>W: dispatch then Zustand store then components re-render
+  end
+  Note over E,S: a REJECTED candidate is emitted so verification is visibly real
+  E-->>S: event:approval.required {draft submittable:false}
+  S-->>W: status AWAITING_APPROVAL + PR draft
+  U->>W: click Approve
+  W->>A: POST /api/v1/approvals/{mission_id} {decision:"APPROVE"}
+  A-->>W: {action_taken:"DRAFT_SAVED_LOCALLY", github_write:false}
+  Note over A: github_write is hard-overridden to false (invariant)</pre></div>
+    <div class="callout key"><span class="lbl">Rule 1 on the client</span>If the SSE connection fails 3× (exponential backoff 800 ms→8 s), the frontend transparently swaps to <code>runMockMission</code>, which emits the <b>identical</b> event names into the same dispatch — the store/UI path is unchanged.</div>
+
+    <!-- 6 -->
+    <h2 id="decisions">6 · Decision register</h2>
+    <p class="legend">Status: <span class="pill green">real &amp; default</span> <span class="pill amber">optional / when-provisioned</span> <span class="pill red">off by default (safety)</span></p>
+
+    <h4>Architecture &amp; packaging</h4>
+    <table><thead><tr><th>Choice</th><th>Why THIS (vs alternatives)</th><th>Trade-off accepted</th><th>Where in code</th></tr></thead><tbody>
+    <tr><td><span class="pill green">Modular monolith</span></td><td>Local-first needs a 2-process boot with no infra; microservices' cost buys nothing at single-dev scale (ADR-0001)</td><td>No per-module scaling; discipline to keep seams clean</td><td><code>apps/api</code>, <code>apps/web</code>, <code>packages/*</code></td></tr>
+    <tr><td><span class="pill green">One package per capability (10)</span></td><td>Ownership seams + independent tests; each an optional dep behind an interface so demo always boots</td><td>11 <code>pyproject.toml</code>; editable via <code>[tool.uv.sources]</code></td><td><code>packages/*/pyproject.toml</code></td></tr>
+    <tr><td><span class="pill green">Contract-first</span></td><td>FE + BE + simulation target one fixed JSON/SSE shape ⇒ real vs simulated engine interchangeable</td><td>Drift caught by tests, not the compiler</td><td><code>docs/API_CONTRACT.md</code>, <code>schemas.py</code>, <code>lib/types.ts</code></td></tr>
+    <tr><td><span class="pill green">Demo/simulation as a runtime</span></td><td>Show the complete mission with Python+Node; Windows-friendly; doubles as the deterministic test fixture (ADR-0003)</td><td>Risk of "demo looks real" — mitigated by <code>health:"mock"</code> + honest docs</td><td><code>simulation.py</code>, <code>APP_ENV=demo</code></td></tr>
+    </tbody></table>
+
+    <h4>Transport &amp; API</h4>
+    <table><thead><tr><th>Choice</th><th>Why THIS</th><th>Trade-off</th><th>Where</th></tr></thead><tbody>
+    <tr><td><span class="pill green">FastAPI pinned <code>&gt;=0.115,&lt;0.116</code></span></td><td>0.139.x has a broken <code>include_router</code> that silently registers zero routes (verified, commented)</td><td>Below latest until upstream fix; starlette pinned to match</td><td><code>apps/api/pyproject.toml</code></td></tr>
+    <tr><td><span class="pill green">SSE for the mission stream</span></td><td>One-way server→client with native <code>Last-Event-ID</code> reconnect; simpler than WebSockets for telemetry</td><td>No client→server on the same conn (actions are REST)</td><td><code>main.py</code> <code>/events/stream</code></td></tr>
+    <tr><td><span class="pill green"><code>sse-starlette &gt;=2.1,&lt;3</code></span></td><td>3.x needs starlette≥0.49, conflicting with the FastAPI pin</td><td>Older line</td><td><code>apps/api/pyproject.toml</code></td></tr>
+    <tr><td><span class="pill green">Pydantic v2 everywhere</span></td><td>One typed model set across transport/engine/packages; <code>model_dump(mode="json")</code> = exact contract JSON</td><td>v2 migration cost (paid)</td><td><code>schemas.py</code> (36 models, 17 enums)</td></tr>
+    <tr><td><span class="pill green">Uniform error envelope</span></td><td>Predictable <code>{error:{code,message,detail}}</code>; FE <code>ApiError</code> maps it</td><td>A little more handler code</td><td><code>main.py</code> handlers</td></tr>
+    </tbody></table>
+
+    <h4>Knowledge / RAG</h4>
+    <table><thead><tr><th>Choice</th><th>Why THIS</th><th>Trade-off</th><th>Where</th></tr></thead><tbody>
+    <tr><td><span class="pill amber">Ollama emb.</span> <span class="pill green">hash fallback</span></td><td>Local free embeddings when up; deterministic <code>blake2b</code> 768-dim keeps RAG+tests offline</td><td>Hash vectors not semantic (tests/CI)</td><td><code>rag_core/embeddings.py</code></td></tr>
+    <tr><td><span class="pill amber">Qdrant server</span> <span class="pill green"><code>:memory:</code></span></td><td>Real ANN when reachable (0.75 s socket probe); local mode needs no Docker</td><td>Local mode in-process/not shared</td><td><code>rag_core/vector_store.py</code></td></tr>
+    <tr><td><span class="pill green">Dense+BM25 → RRF k=60 → rerank</span></td><td>Dense recall + BM25 (k1=1.5,b=0.75, exact-boost 2.0) precision; RRF fuses without calibration</td><td>Two indexes; k=60 fixed heuristic</td><td><code>rag_core/retrieval.py</code>, <code>bm25.py</code></td></tr>
+    <tr><td><span class="pill green">AST-aware chunking</span></td><td>Chunk by function/class/method with line ranges+symbols ⇒ precise code citations</td><td>Python-only AST (md/text chunkers cover rest)</td><td><code>rag_core/chunking.py</code></td></tr>
+    <tr><td><span class="pill green">Citations + claim verifier</span></td><td>Every claim cites chunks; verifier rejects unsupported (≥0.5); NO-ANSWER below <code>rag_min_score=0.15</code></td><td>Extractive baseline is lexical without an LLM</td><td><code>rag_core/verifier.py</code>, <code>pipeline.py</code></td></tr>
+    <tr><td><span class="pill green">UUIDv5 point ids</span></td><td>Qdrant needs UUID/uint; fold stable sha1 <code>Chunk.make_id</code> → idempotent upserts, id kept in payload</td><td>Indirection chunk id ↔ point id</td><td><code>rag_core/vector_store.py</code></td></tr>
+    </tbody></table>
+
+    <h4>Contribution engine</h4>
+    <table><thead><tr><th>Choice</th><th>Why THIS</th><th>Trade-off</th><th>Where</th></tr></thead><tbody>
+    <tr><td><span class="pill green">AST agents + real ruff/mypy</span></td><td>A real linter beats asking an LLM "does this lint?"; AST agents are tool-free + reproducible</td><td>Fixed rule set (see §7 docstring note)</td><td><code>static_analysis/ast_agents.py</code>, <code>tool_agents.py</code></td></tr>
+    <tr><td><span class="pill green">Diffs via <code>difflib</code>, never LLM</span></td><td>A patch's diff must be real; the LLM only enriches root-cause prose</td><td>Template transforms are a small set</td><td><code>patch_gen/generator.py</code></td></tr>
+    <tr><td><span class="pill green">Always emit NO_SUBMISSION</span></td><td>The honest option when evidence is weak; avoids over-proposing</td><td>One extra candidate per finding</td><td><code>patch_gen/generator.py</code></td></tr>
+    <tr><td><span class="pill green">3-signal duplicate fusion</span></td><td>Exact signals high-precision; semantic catches paraphrase; weights 0.5/0.2/0.3, thresholds 0.72/0.5/0.3</td><td>Tuned heuristics (not test-pinned)</td><td><code>dup_detect/detector.py</code></td></tr>
+    <tr><td><span class="pill green">Structural verifier independence</span></td><td>"authors can't verify own output" enforced by an <code>assert</code>, not convention</td><td>A guard that only fires on a wiring bug</td><td><code>verify_swarm/swarm.py</code></td></tr>
+    <tr><td><span class="pill red">Sandbox exec off by default</span></td><td>Running untrusted code is the top risk; default-deny + preflight + allowlist + hardened container</td><td>Runtime findings need flag+Docker to be real</td><td><code>sandbox/*</code></td></tr>
+    </tbody></table>
+
+    <h4>Orchestration &amp; cross-cutting</h4>
+    <table><thead><tr><th>Choice</th><th>Why THIS</th><th>Trade-off</th><th>Where</th></tr></thead><tbody>
+    <tr><td><span class="pill amber">LangGraph in-stage / Temporal across-stages</span></td><td>Cyclic agent loops want a fast in-memory graph; durable multi-day approval wait wants a durable engine — one tool can't do both (ADR-0002)</td><td>Two techs; currently simulated by <code>simulation.py</code></td><td><code>simulation.py</code></td></tr>
+    <tr><td><span class="pill green">Append-only buffer + Last-Event-ID replay</span></td><td>Monotonic 1-based ids let a reconnecting SSE client resume exactly; buffer is the snapshot source of truth</td><td>In-memory (Postgres/Temporal persist in the wired build)</td><td><code>simulation.py</code> <code>MissionStore</code></td></tr>
+    <tr><td><span class="pill green"><code>pydantic-settings</code>, <code>CAREERFORGE_</code></span></td><td>One typed settings object; env + <code>.env</code>; nested <code>CAREERFORGE_FLAG_*</code> for safety flags</td><td>Env naming discipline</td><td><code>config.py</code></td></tr>
+    <tr><td><span class="pill amber">OpenTelemetry</span> <span class="pill green">in-mem tracer</span></td><td>Real traces when <code>CAREERFORGE_OTEL_ENABLED=1</code>+SDK; else a 500-span ring feeds <code>/system/metrics</code></td><td>Built-in tracer not distributed</td><td><code>observability/tracing.py</code></td></tr>
+    <tr><td><span class="pill green">Secret redaction at the boundary</span></td><td>Tokens never reach logs/reprs/errors/spans</td><td>Redaction is key-name based (documented edge cases)</td><td><code>github_client/redact.py</code>, <code>observability</code></td></tr>
+    </tbody></table>
+
+    <!-- 7 -->
+    <h2 id="deep">7 · Subsystem deep dives</h2>
+
+    <h3>7.1 Mission engine — lifecycle</h3>
+    <p><code>MissionStore</code> is a process-wide, <code>RLock</code>-guarded registry. <code>append()</code> increments a per-mission monotonic counter, appends to a replay buffer, and folds the event into live state; <code>log</code>/<code>resource</code> events live only in the buffer. <code>MissionSimulator</code> seeds its RNG from <code>sha256(repo_url)</code> — never system entropy — so the same URL always tells the same story and guarantees ≥1 ACCEPTED + ≥1 REJECTED candidate.</p>
+    <div class="diagram"><div class="mmd-notice"></div><pre class="mermaid">stateDiagram-v2
+  [*] --> QUEUED
+  QUEUED --> PLANNING: ENGINE.run task starts
+  PLANNING --> RUNNING: stages execute
+  RUNNING --> AWAITING_APPROVAL: a candidate ACCEPTED then non-submittable draft
+  RUNNING --> COMPLETED: no candidate accepted
+  AWAITING_APPROVAL --> COMPLETED: approve
+  AWAITING_APPROVAL --> CANCELLED: reject
+  COMPLETED --> [*]
+  CANCELLED --> [*]</pre></div>
+    <ul>
+      <li>SSE immediately yields a <code>resource</code> snapshot, replays from <code>Last-Event-ID</code> (header <em>or</em> <code>?lastEventId=</code>), heartbeats every 15 s as an SSE comment, ends once complete and caught-up.</li>
+      <li><code>ENGINE.run</code> drives the <b>synchronous</b> <code>script()</code> list with its own pacing (0.14 s demo) — not the simulator's async <code>run()</code>; tests drain it with no sleeps via <code>run_mission_sync</code>.</li>
+      <li>The approval endpoint <b>hard-overrides</b> <code>github_write=False</code>; <code>test_approval_never_performs_github_write</code> asserts it.</li>
+    </ul>
+
+    <h3>7.2 Defensive subsystem-wiring pattern (<code>main.py</code>)</h3>
+    <div class="diagram"><div class="mmd-notice"></div><pre class="mermaid">flowchart TB
+  T["try: import &lt;sys&gt;_router (+ service)"]:::api --> OK["router = mod.router<br/>health_label() closure"]:::engine
+  T -->|"except Exception"| DOWN["router = None<br/>health_label() then down"]:::danger
+  OK --> INC{"router is not None?"}:::api
+  INC -->|yes| MOUNT["app.include_router(prefix=/api/v1)"]:::engine
+  INC -->|no| SKIP["endpoints simply absent"]:::danger
+  MOUNT --> HEALTH["/system/health services{} + bootup report"]:::cross
+  DOWN --> HEALTH
+  classDef api fill:#131b2b,stroke:#a78bfa,color:#e6edf7;
+  classDef engine fill:#131b2b,stroke:#34d399,color:#e6edf7;
+  classDef danger fill:#0e1420,stroke:#fb7185,color:#e6edf7;
+  classDef cross fill:#0e1420,stroke:#fbbf24,color:#e6edf7;</pre></div>
+    <p>A <code>_lifespan</code> context manager runs <code>_bootup_report()</code> on startup (probes every subsystem + the local LLM via <code>patch_gen.probe()</code>) and must never block serving.</p>
+
+    <h3>7.3 RAG pipeline (<code>rag_core</code>)</h3>
+    <p>Fixed order: <code>validate_domain → dense+sparse → RRF (k=60) → rerank → time/version filter → dedupe by (path,symbol) → NO-ANSWER if empty or top score &lt; 0.15 → top-K (8) → build citations → generate claims → verify each claim vs exactly its cited chunks → answered = any supported</code>. Six fixed collections. The time/version filter keeps the newest <code>published_at</code> per <code>(path,symbol)</code> — suppressed when the query asks for history.</p>
+
+    <h3>7.4 Sandbox (<code>sandbox</code>) — security-critical</h3>
+    <div class="callout danger"><span class="lbl">Hardening (pure <code>build_run_args</code>)</span><code>--user 65534:65534</code>, <code>--cap-drop ALL</code>, <code>--security-opt no-new-privileges</code>, <code>--read-only</code>, <code>--tmpfs /tmp:rw,size=256m,noexec</code>, repo bind-mounted <code>,ro</code>, <code>--memory/--cpus/--pids-limit</code>, <code>--network none</code> (only <code>install</code> stage gets <code>bridge</code>). <b>No host home / SSH / Docker-socket / token mounts, ever.</b></div>
+    <p>The policy engine is an allowlist (python/pytest/ruff/mypy/pip/uv/coverage), a denylist (<code>rm</code>, <code>curl</code>, <code>sudo</code>, <code>docker</code>, … anywhere), a shell-metacharacter reject, and <code>source</code>/<code>sh</code>/<code>bash</code> blocked at argv[0]. Deterministic and model-independent so an LLM cannot widen its own permissions.</p>
+
+    <h3>7.5 GitHub client (<code>github_client</code>) — read-only, token-safe</h3>
+    <p>Read-only is enforced at the <b>transport layer</b>: <code>_ReadOnlyTransport</code> raises <code>ReadOnlyViolation</code> for any non-GET before a byte leaves the process. The token lives in a <code>SecretStr</code>, only ever in the <code>Authorization</code> header; <code>__repr__</code> shows only URL + authenticated bool; every error path runs through <code>redact()</code>. <code>list_issues</code> excludes PRs; rate-limit is raised only on a genuine 403/429 rate-limit signal.</p>
+
+    <h3>7.6 Frontend data flow (<code>apps/web</code>)</h3>
+    <p><code>analyzeRepo</code> → seed Zustand store → <code>useMissionStream</code> opens an <code>EventSource</code>, registers one listener per contract event, <code>dispatch()</code> maps each to a store action; components subscribe with selectors. System health/resources use a <b>separate</b> TanStack Query polling path (5 s), distinct from the SSE mission telemetry. Heavy libs are isolated per screen: React Flow (Command Center), R3F (Skills, <code>ssr:false</code> + WebGL fallback), Monaco (Lab, <code>ssr:false</code> + unified-diff fallback), ECharts (Pulse).</p>
+
+    <!-- 8 -->
+    <h2 id="er">8 · Data model (ER)</h2>
+    <p class="legend">Relationships are composition in the API payloads / Pydantic models, not a relational schema — persistence is in-memory in demo mode.</p>
+    <div class="diagram"><div class="mmd-notice"></div><pre class="mermaid">erDiagram
+  MISSION ||--o| MISSIONPLAN : has
+  MISSION ||--o{ AGENTNODE : contains
+  MISSION ||--o{ GRAPHEDGE : contains
+  MISSION ||--o{ FINDING : contains
+  MISSION ||--o{ CANDIDATE : contains
+  MISSION ||--o| MISSIONAPPROVAL : has
+  FINDING ||--o{ EVIDENCEREF : cites
+  CANDIDATE ||--o{ DIFFLINE : has
+  CANDIDATE ||--o{ VERIFICATIONCHECK : verified_by
+  MISSIONAPPROVAL ||--o| DRAFT : wraps
+  AGENTNODE }o--o| AGENTNODE : verifier_of
+  PROFILE ||--o{ SKILL : summarizes
+  SKILL ||--o{ EVIDENCE : backed_by
+  SKILL }o--o{ SKILL : related_to
+  MISSION {
+    string mission_id
+    string repo_url
+    enum status
+    datetime created_at
+  }
+  AGENTNODE {
+    string id
+    enum group
+    enum state
+    float progress
+    string verifier_of
+  }
+  FINDING {
+    string finding_id
+    enum category
+    enum severity
+    float confidence
+    enum reproduction_status
+    string agent_id
+  }
+  CANDIDATE {
+    string candidate_id
+    string author_agent
+    enum verdict
+    enum risk_level
+    bool unrelated_changes
+  }
+  VERIFICATIONCHECK {
+    string check
+    enum status
+    string verifier_agent
+  }
+  DRAFT {
+    enum kind
+    bool submittable
+    string reason_not_submittable
+  }
+  SKILL {
+    string id
+    string name
+    float confidence
+    enum verification_level
+  }
+  EVIDENCE {
+    string id
+    enum type
+    enum verification_level
+    string source_url
+  }</pre></div>
+
+    <!-- 9 -->
+    <h2 id="changes">9 · How to make common changes</h2>
+    <table><thead><tr><th>Task</th><th>Steps</th><th>Files</th></tr></thead><tbody>
+    <tr><td>Add an API endpoint</td><td>Add req/resp model; add a route (new router via the 3-part pattern, or <code>@app.*</code>)</td><td><code>schemas.py</code>, a <code>*_router.py</code>, <code>main.py</code></td></tr>
+    <tr><td>Add a subsystem package</td><td>Scaffold <code>packages/&lt;name&gt;/</code>; add to API deps + <code>[tool.uv.sources]</code>; write router + adapter block + include + health label</td><td><code>packages/&lt;name&gt;/*</code>, <code>apps/api/pyproject.toml</code>, <code>main.py</code></td></tr>
+    <tr><td>Add a contract field</td><td>Update the model in <code>schemas.py</code> <b>and</b> the TS type; update the simulation; a test fails on drift</td><td><code>schemas.py</code>, <code>lib/types.ts</code>, <code>simulation.py</code>, <code>tests/</code></td></tr>
+    <tr><td>Change the mission story</td><td>Edit topology / findings / candidate logic; keep ≥1 ACCEPTED + ≥1 REJECTED</td><td><code>simulation.py</code></td></tr>
+    <tr><td>Add a static-analysis rule</td><td>Add a detector in the relevant AST agent returning a <code>Finding</code> with evidence</td><td><code>static_analysis/ast_agents.py</code> (+ fixture)</td></tr>
+    <tr><td>Add a frontend screen</td><td>Add a route under <code>(app)/&lt;name&gt;/page.tsx</code>; fetch via <code>api.ts</code>/store; add a nav item</td><td><code>apps/web/src/app/(app)/*</code>, <code>src/lib/*</code></td></tr>
+    <tr><td>Change theme colors</td><td>Edit the design tokens; diagrams here + the HTML pull the same palette</td><td><code>apps/web/src/app/globals.css</code>, this file</td></tr>
+    <tr><td>Wire a real service</td><td>Flip the setting/flag; the subsystem probes and upgrades — the contract is unchanged</td><td><code>config.py</code>, <code>.env</code>, <code>NEXT_PHASE.md</code></td></tr>
+    </tbody></table>
+
+    <!-- 10 -->
+    <h2 id="glossary">10 · Glossary</h2>
+    <ul>
+      <li><b>Mission</b> — one repository-analysis run; the central aggregate.</li>
+      <li><b>Demo mode</b> — <code>APP_ENV=demo</code> (default); scripted deterministic mission over the real SSE contract; services report <code>"mock"</code>.</li>
+      <li><b>Contract</b> — the fixed JSON/SSE shapes in <code>docs/API_CONTRACT.md</code>, mirrored in <code>schemas.py</code> and <code>lib/types.ts</code>.</li>
+      <li><b>Degrade gracefully</b> — probe a provider; on absence use a deterministic fallback and log it (Rule 1).</li>
+      <li><b>Gate / flag</b> — a <code>CAREERFORGE_FLAG_*</code> boolean (default <code>false</code>) guarding a dangerous action.</li>
+      <li><b>Verifier independence</b> — a <code>verify.*</code> agent is never the <code>fix.*</code> author of the candidate it checks (Rule 3).</li>
+      <li><b>NO_SUBMISSION</b> — a candidate verdict meaning "don't propose a PR"; always available.</li>
+      <li><b>RRF</b> — Reciprocal Rank Fusion (k=60) merging dense + BM25 rankings.</li>
+      <li><b>Preflight</b> — the sandbox's read-only static risk scan; HIGH ⇒ <code>BLOCKED</code>.</li>
+      <li><b>Last-Event-ID</b> — the SSE cursor (monotonic per mission) enabling exact reconnect/replay.</li>
+    </ul>
+
+    <!-- Appendix -->
+    <h2 id="verified">Appendix · Verified facts (ground truth)</h2>
+    <ul>
+      <li><b>Backend:</b> Python ≥3.12 · FastAPI <code>&gt;=0.115,&lt;0.116</code> · starlette <code>&gt;=0.41,&lt;0.42</code> · uvicorn <code>&gt;=0.30</code> · pydantic <code>&gt;=2.7</code> · pydantic-settings <code>&gt;=2.3</code> · sse-starlette <code>&gt;=2.1,&lt;3</code> · httpx <code>&gt;=0.27</code> · psutil <code>&gt;=5.9</code> · qdrant-client <code>&gt;=1.12</code> · numpy <code>&gt;=1.26</code>.</li>
+      <li><b>Frontend:</b> Next.js 14.2.15 · React 18.3.1 · TypeScript 5.6.3 · Tailwind 3.4.14 · framer-motion 11.11.11 · @xyflow/react 12.3.5 · @react-three/fiber 8.17.10 + drei 9.114.3 + three 0.169.0 · @monaco-editor/react 4.6.0 · echarts 5.5.1 · @tanstack/react-query 5.59.16 · zustand 4.5.5.</li>
+      <li><b>Commands (Makefile):</b> <code>make setup</code> · <code>make dev</code> (or <code>make api</code>/<code>make web</code>) · <code>make test</code> (<code>pytest apps/api/tests</code>) · <code>make lint</code> · <code>make typecheck</code> · entrypoint <code>python -m careerforge_api</code>.</li>
+      <li><b>API:</b> 34 routes under <code>/api/v1</code> (authoritative, from the live app).</li>
+      <li><b>Data model:</b> 36 Pydantic models (35 + a <code>_Base</code>), 17 enums.</li>
+      <li><b>Tests: 146</b> — api 21 · rag_core 31 · github_client 21 · static_analysis 9 · dup_detect 6 · patch_gen 6 · verify_swarm 5 · artifact_engine 9 · sandbox 26 · runtime_investigation 5 · observability 7.</li>
+      <li><b>External stores (compose, optional):</b> Postgres 16.4 · Qdrant 1.11.3 · Redis 7.4 · Temporal 1.25.1 · Langfuse 2.93.6 · Prometheus 2.54.1 · Grafana 11.2.0.</li>
+      <li><b>ADRs:</b> ADR-0001 (modular monolith), ADR-0002 (LangGraph/Temporal boundary), ADR-0003 (demo/simulation mode).</li>
+    </ul>
+
+    <h3 id="discrepancies">Known code/doc discrepancies (reported honestly)</h3>
+    <div class="callout warn"><span class="lbl">Verified, not hidden</span>
+    <ul style="margin:0">
+      <li><code>static_analysis/ast_agents.py</code>'s docstring claims <code>pickle.loads</code>/<code>yaml.load</code>/validation-<code>assert</code> detection, but the code detects only bare-<code>except:</code>, <code>eval</code>/<code>exec</code>, <code>shell=True</code>, <code>verify=False</code>.</li>
+      <li><code>artifact_engine</code> declares <code>_CONTRIB_ORDER</code> with <code>REFACTOR</code>/<code>FEATURE</code>, but <code>_recommend_type</code> only returns <code>DOCS</code>/<code>TEST</code>/<code>BUGFIX</code>/<code>TYPING</code>.</li>
+      <li><code>rag_core/config.py</code> has a <code>resolve_qdrant_target</code> (httpx probe) parallel to the socket probe in <code>vector_store.py</code>; the store construction uses the socket probe.</li>
+      <li>Orchestration (LangGraph/Temporal) is <b>simulated</b> by <code>simulation.py</code>, not yet wired; the simulation emits the exact contract those layers would produce.</li>
+    </ul></div>
+
+    <div class="footer">
+      © 2026 CareerForge AI — All rights reserved by Arpit Sahu · MIT License.<br/>
+      Kept in sync with <code>docs/architecture/ARCHITECTURE.md</code>. Diagrams render with Mermaid 11 (ESM from jsDelivr); if the CDN is unreachable this page shows the diagram source as readable text instead of a blank space.
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  // Render Mermaid diagrams with a dark theme. Graceful offline fallback:
+  // if the CDN import fails, reveal each diagram's source text + a notice.
+  const blocks = Array.from(document.querySelectorAll('pre.mermaid'));
+  try {
+    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      securityLevel: 'loose',
+      themeVariables: {
+        darkMode: true,
+        background: '#0e1420',
+        primaryColor: '#131b2b',
+        primaryTextColor: '#e6edf7',
+        primaryBorderColor: '#a78bfa',
+        lineColor: '#93a4bd',
+        secondaryColor: '#0e1420',
+        tertiaryColor: '#05070d',
+        fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif",
+        fontSize: '14px',
+        noteBkgColor: '#131b2b',
+        noteTextColor: '#e6edf7',
+        noteBorderColor: '#fbbf24',
+        actorBkg: '#131b2b',
+        actorBorder: '#a78bfa',
+        actorTextColor: '#e6edf7',
+        signalColor: '#93a4bd',
+        signalTextColor: '#e6edf7',
+        labelBoxBkgColor: '#0e1420',
+        labelTextColor: '#e6edf7'
+      }
+    });
+    // Render each block individually so one bad diagram can't blank the rest.
+    for (let i = 0; i < blocks.length; i++) {
+      const el = blocks[i];
+      const src = el.textContent;
+      try {
+        const { svg } = await mermaid.render('mmd-svg-' + i, src);
+        el.innerHTML = svg;
+        el.classList.add('rendered');
+      } catch (err) {
+        renderFallback(el, src, 'This diagram failed to parse: ' + (err && err.message ? err.message : err));
+      }
+    }
+  } catch (e) {
+    // CDN unreachable / offline — show every diagram's source as readable text.
+    for (const el of blocks) {
+      renderFallback(el, el.textContent, 'Mermaid could not be loaded (offline?). Showing diagram source:');
+    }
+  }
+
+  function renderFallback(preEl, src, message) {
+    const host = preEl.closest('.diagram') || preEl.parentElement;
+    host.classList.add('failed');
+    const notice = host.querySelector('.mmd-notice');
+    if (notice) notice.textContent = message;
+    // Convert the live <pre.mermaid> into the readable source fallback.
+    preEl.classList.add('mmd-fallback');
+    preEl.textContent = src;
+  }
+</script>
+</body>
+</html>
