@@ -27,6 +27,7 @@ _ALL_SERVICES = {
     "duplicates",
     "candidates",
     "verifications",
+    "artifacts",
     *_MOCKABLE_SERVICES,
 }
 
@@ -57,6 +58,8 @@ def test_health_returns_200_and_contract_shape() -> None:
     assert services["candidates"] in {"ready", "down"}
     # verifications (Phase 10) reports "ready" | "down".
     assert services["verifications"] in {"ready", "down"}
+    # artifacts (Phase 13) reports "ready" | "down".
+    assert services["artifacts"] in {"ready", "down"}
 
     # Hardware profile must be one of the four contract values.
     assert body["hardware_profile"] in _VALID_PROFILES

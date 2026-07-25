@@ -50,6 +50,8 @@ dependencies = [
     "patch_gen",
     # Verification swarm (Phase 10).
     "verify_swarm",
+    # Artifact engine + opportunity miner (Phase 13).
+    "artifact_engine",
 ]
 
 # Resolve the local sibling packages from the monorepo path when using uv.
@@ -63,6 +65,7 @@ static_analysis = { path = "../../packages/static_analysis", editable = true }
 dup_detect = { path = "../../packages/dup_detect", editable = true }
 patch_gen = { path = "../../packages/patch_gen", editable = true }
 verify_swarm = { path = "../../packages/verify_swarm", editable = true }
+artifact_engine = { path = "../../packages/artifact_engine", editable = true }
 
 [project.optional-dependencies]
 dev = [

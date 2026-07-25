@@ -1578,6 +1578,29 @@ except Exception:  # pragma: no cover - verify optional at boot
 
 
 # ===========================================================================
+# Adapter: Artifact engine + opportunity miner (packages/artifact_engine, P13)
+# ===========================================================================
+try:
+    from careerforge_api import artifact_router as _artifact_router_mod
+
+    _ARTIFACT_ROUTER: Any | None = _artifact_router_mod.router
+
+    def _artifact_health_label() -> str:
+        try:
+            import artifact_engine  # noqa: F401
+
+            return "ready"
+        except Exception:
+            return "down"
+
+except Exception:  # pragma: no cover - artifact optional at boot
+    _ARTIFACT_ROUTER = None
+
+    def _artifact_health_label() -> str:
+        return "down"
+
+
+# ===========================================================================
 # Error handling — contract error shape
 # ===========================================================================
 def _error_response(status_code: int, code: str, message: str, detail: Any = None) -> JSONResponse:
@@ -1603,6 +1626,7 @@ async def _bootup_report() -> dict[str, Any]:
         "duplicates": _dup_health_label(),
         "candidates": _patch_health_label(),
         "verifications": _verify_health_label(),
+        "artifacts": _artifact_health_label(),
     }
     # Actively probe the optional local LLM (never fatal).
     try:
@@ -1726,6 +1750,11 @@ if _PATCH_ROUTER is not None:
 if _VERIFY_ROUTER is not None:
     app.include_router(_VERIFY_ROUTER, prefix=API_PREFIX)
 
+# Artifact engine + opportunity miner (POST /artifacts/assignments,
+# POST /opportunities/mine) — Phase 13.
+if _ARTIFACT_ROUTER is not None:
+    app.include_router(_ARTIFACT_ROUTER, prefix=API_PREFIX)
+
 
 # ---------------------------------------------------------------------------
 # Root banner
@@ -1776,6 +1805,8 @@ async def system_health() -> dict[str, Any]:
             "candidates": _patch_health_label(),
             # Verification swarm (Phase 10): "ready" | "down".
             "verifications": _verify_health_label(),
+            # Artifact engine + opportunity miner (Phase 13): "ready" | "down".
+            "artifacts": _artifact_health_label(),
         },
         "hardware_profile": HARDWARE_PROFILE,
         "flags": {

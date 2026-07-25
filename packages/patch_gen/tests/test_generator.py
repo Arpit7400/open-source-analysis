@@ -101,13 +101,13 @@ async def test_candidates_match_contract_enums(repo: Path) -> None:
 @pytest.mark.asyncio
 async def test_deterministic_without_llm(repo: Path) -> None:
     gen = PatchGenerator()
-    kw = dict(
-        finding_id="f1",
-        summary="Bare `except:` at pkg/bad.py:7.",
-        category="SECURITY_SMELL",
-        path="pkg/bad.py",
-        line=7,
-    )
+    kw = {
+        "finding_id": "f1",
+        "summary": "Bare `except:` at pkg/bad.py:7.",
+        "category": "SECURITY_SMELL",
+        "path": "pkg/bad.py",
+        "line": 7,
+    }
     a = await gen.generate_for_finding(repo, **kw)
     b = await gen.generate_for_finding(repo, **kw)
     assert [c.candidate_id for c in a.candidates] == [c.candidate_id for c in b.candidates]
