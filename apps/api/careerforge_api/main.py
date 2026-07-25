@@ -1629,6 +1629,29 @@ except Exception:  # pragma: no cover - sandbox optional at boot
         return "down"
 
 
+# ===========================================================================
+# Adapter: Runtime investigation (packages/runtime_investigation, Phase 7)
+# ===========================================================================
+try:
+    from careerforge_api import runtime_router as _runtime_router_mod
+
+    _RUNTIME_ROUTER: Any | None = _runtime_router_mod.router
+
+    def _runtime_health_label() -> str:
+        try:
+            import runtime_investigation  # noqa: F401
+
+            return "ready"
+        except Exception:
+            return "down"
+
+except Exception:  # pragma: no cover - runtime optional at boot
+    _RUNTIME_ROUTER = None
+
+    def _runtime_health_label() -> str:
+        return "down"
+
+
 def _settings_flags_repo_exec() -> bool:
     """Best-effort read of the repository_execution flag for health/bootup."""
     try:
@@ -1665,6 +1688,7 @@ async def _bootup_report() -> dict[str, Any]:
         "verifications": _verify_health_label(),
         "artifacts": _artifact_health_label(),
         "sandbox": _sandbox_health_label(),
+        "runtime": _runtime_health_label(),
         "repository_execution": _settings_flags_repo_exec(),
     }
     # Actively probe the optional local LLM (never fatal).
@@ -1806,6 +1830,11 @@ if _ARTIFACT_ROUTER is not None:
 if _SANDBOX_ROUTER is not None:
     app.include_router(_SANDBOX_ROUTER, prefix=API_PREFIX)
 
+# Runtime-investigation router (POST /runtime/environment, /runtime/investigate)
+# — Phase 7. Sandboxed runs gated behind the flag.
+if _RUNTIME_ROUTER is not None:
+    app.include_router(_RUNTIME_ROUTER, prefix=API_PREFIX)
+
 
 # ---------------------------------------------------------------------------
 # Root banner
@@ -1860,6 +1889,8 @@ async def system_health() -> dict[str, Any]:
             "artifacts": _artifact_health_label(),
             # Sandbox (Phase 6): "ready" | "ready-no-engine" | "armed:<engine>" | "down".
             "sandbox": _sandbox_health_label(),
+            # Runtime investigation (Phase 7): "ready" | "down".
+            "runtime": _runtime_health_label(),
         },
         "hardware_profile": HARDWARE_PROFILE,
         "flags": {

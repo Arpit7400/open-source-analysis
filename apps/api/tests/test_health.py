@@ -29,6 +29,7 @@ _ALL_SERVICES = {
     "verifications",
     "artifacts",
     "sandbox",
+    "runtime",
     *_MOCKABLE_SERVICES,
 }
 
@@ -63,6 +64,8 @@ def test_health_returns_200_and_contract_shape() -> None:
     assert services["artifacts"] in {"ready", "down"}
     # sandbox (Phase 6) reports a non-empty posture label.
     assert isinstance(services["sandbox"], str) and services["sandbox"]
+    # runtime (Phase 7) reports "ready" | "down".
+    assert services["runtime"] in {"ready", "down"}
 
     # Hardware profile must be one of the four contract values.
     assert body["hardware_profile"] in _VALID_PROFILES

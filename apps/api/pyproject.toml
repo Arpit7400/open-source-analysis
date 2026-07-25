@@ -54,6 +54,8 @@ dependencies = [
     "artifact_engine",
     # Restricted sandbox (Phase 6).
     "sandbox",
+    # Runtime investigation (Phase 7).
+    "runtime_investigation",
 ]
 
 # Resolve the local sibling packages from the monorepo path when using uv.
@@ -69,6 +71,7 @@ patch_gen = { path = "../../packages/patch_gen", editable = true }
 verify_swarm = { path = "../../packages/verify_swarm", editable = true }
 artifact_engine = { path = "../../packages/artifact_engine", editable = true }
 sandbox = { path = "../../packages/sandbox", editable = true }
+runtime_investigation = { path = "../../packages/runtime_investigation", editable = true }
 
 [project.optional-dependencies]
 dev = [
