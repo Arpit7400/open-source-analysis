@@ -22,6 +22,7 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
 import { ReactFlowProvider } from "@xyflow/react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -33,6 +34,7 @@ import {
   ScrollText,
   Gauge as GaugeIcon,
   ShieldAlert,
+  ArrowRight,
 } from "lucide-react";
 import * as api from "@/lib/api";
 import { ApiError } from "@/lib/api";
@@ -327,21 +329,42 @@ export default function CommandCenterPage() {
                     </p>
                   </div>
                 ) : null}
-                {approval?.required ? (
-                  <div
-                    className="mt-1 flex items-center gap-2 rounded-lg px-2.5 py-2 text-[0.6875rem]"
+                {approval?.required && !approval.granted ? (
+                  <Link
+                    href="/lab"
+                    className="group mt-1 flex flex-col gap-1.5 rounded-lg px-2.5 py-2.5 text-[0.6875rem] no-underline transition-colors"
                     style={{
                       color: "var(--accent-amber)",
                       background:
-                        "color-mix(in srgb, var(--accent-amber) 10%, transparent)",
+                        "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
                       border:
-                        "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
+                        "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                     }}
                     role="status"
+                    aria-label="Human approval required — go to the Contribution Lab to review and approve"
                   >
-                    <ShieldAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    Human approval required — review in the Contribution Lab.
-                  </div>
+                    <span className="flex items-center gap-2 font-semibold">
+                      <ShieldAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      Human approval required
+                    </span>
+                    <span className="leading-relaxed text-[color:var(--text-secondary)]">
+                      A fix passed independent verification. Review the diff and
+                      approve it in the Contribution Lab.
+                    </span>
+                    <span
+                      className="mt-0.5 inline-flex items-center gap-1 self-start rounded-md px-2 py-1 font-semibold"
+                      style={{
+                        color: "var(--bg-void)",
+                        background: "var(--accent-amber)",
+                      }}
+                    >
+                      Review &amp; approve
+                      <ArrowRight
+                        className="h-3 w-3 transition-transform group-hover:translate-x-0.5"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </Link>
                 ) : null}
               </dl>
             </Panel>

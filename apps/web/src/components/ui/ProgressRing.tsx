@@ -7,8 +7,14 @@ import { cn } from "@/lib/cn";
 interface ProgressRingProps {
   /** Progress in the range 0..1 (values are clamped). */
   progress: number;
-  /** Outer diameter in px. */
+  /** Outer diameter in px — used as the SVG viewBox coordinate space. */
   size?: number;
+  /**
+   * When true, the ring scales to fill its parent's width (SVG uses the `size`
+   * viewBox for geometry but renders at 100% × auto). Lets a row of gauges
+   * auto-fit any column width instead of clipping at a fixed pixel size.
+   */
+  responsive?: boolean;
   /** Stroke width in px. */
   stroke?: number;
   /** Ring color — CSS color or custom-property string. */
@@ -35,6 +41,7 @@ interface ProgressRingProps {
 export function ProgressRing({
   progress,
   size = 44,
+  responsive = false,
   stroke = 4,
   color = "var(--accent-cyan)",
   trackColor = "var(--border-hair)",
@@ -61,7 +68,11 @@ export function ProgressRing({
   return (
     <div
       className={cn("relative inline-flex items-center justify-center", className)}
-      style={{ width: size, height: size }}
+      style={
+        responsive
+          ? { width: "100%", aspectRatio: "1 / 1", maxWidth: size }
+          : { width: size, height: size }
+      }
       role="progressbar"
       aria-valuenow={pct}
       aria-valuemin={0}
@@ -69,8 +80,8 @@ export function ProgressRing({
       aria-label={ariaLabel ?? `${pct}%`}
     >
       <svg
-        width={size}
-        height={size}
+        width={responsive ? "100%" : size}
+        height={responsive ? "100%" : size}
         viewBox={`0 0 ${size} ${size}`}
         style={{
           transform: "rotate(-90deg)",

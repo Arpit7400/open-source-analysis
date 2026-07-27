@@ -38,32 +38,38 @@ interface GaugeProps {
 
 function Gauge({ label, icon, fraction, color, center, footnote }: GaugeProps) {
   return (
-    <div className="flex flex-col items-center gap-2">
-      <ProgressRing
-        progress={fraction}
-        size={76}
-        stroke={6}
-        color={color}
-        glow
-        aria-label={`${label} gauge`}
-      >
-        <span className="flex flex-col items-center leading-none">
-          <span aria-hidden="true" style={{ color }}>
-            {icon}
+    <div className="flex min-w-0 flex-col items-center gap-1.5">
+      {/* The ring is fluid: it fills its grid cell (min 52px, ideal ~64px, max
+          72px) so three gauges always fit a narrow left rail without clipping,
+          and scale up gracefully in a wider column. */}
+      <div className="w-full max-w-[72px]">
+        <ProgressRing
+          progress={fraction}
+          size={72}
+          responsive
+          stroke={6}
+          color={color}
+          glow
+          aria-label={`${label} gauge`}
+        >
+          <span className="flex flex-col items-center leading-none">
+            <span aria-hidden="true" style={{ color }}>
+              {icon}
+            </span>
+            <span
+              className="mono mt-0.5 text-[0.8125rem] font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {center}
+            </span>
           </span>
-          <span
-            className="mono mt-1 text-sm font-semibold"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {center}
-          </span>
-        </span>
-      </ProgressRing>
-      <div className="flex flex-col items-center gap-0.5">
+        </ProgressRing>
+      </div>
+      <div className="flex min-w-0 max-w-full flex-col items-center gap-0.5">
         <Eyebrow className="text-[0.5625rem] text-[color:var(--text-muted)]">
           {label}
         </Eyebrow>
-        <span className="mono text-[0.625rem] text-[color:var(--text-secondary)]">
+        <span className="mono max-w-full truncate whitespace-nowrap text-[0.625rem] text-[color:var(--text-secondary)]">
           {footnote}
         </span>
       </div>
@@ -137,7 +143,7 @@ export function ResourceGauges() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 items-start gap-x-1.5 gap-y-2">
         <Gauge
           label="CPU"
           icon={<Cpu className="h-3.5 w-3.5" aria-hidden="true" />}
