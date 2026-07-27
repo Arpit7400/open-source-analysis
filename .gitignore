@@ -20,3 +20,7 @@ out/
 # Coverage
 .coverage
 htmlcov/
+
+# Runtime / build caches (should not be tracked)
+.careerforge-api.pid
+*.tsbuildinfo
